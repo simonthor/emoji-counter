@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Interactive Dash app for exploring emoji data from SQLite database.
+Interactive Dash app for exploring emoji data from SQLite database(s).
 """
 
 import argparse
@@ -22,66 +22,142 @@ class EmojiExplorer:
     controls. Uses :mod:`dash` for the web interface and :mod:`pandas` for data
     manipulation. All queries execute directly against SQLite to minimize memory usage.
 
+    Supports multiple database files. When multiple files are provided, chat names
+    are suffixed with the database file stem in parentheses to distinguish sources.
+
     Must call :meth:`run` to start the web server after initialization.
     """
 
-    def __init__(self, db_path: Path) -> None:
+    def __init__(self, db_paths: list[Path]) -> None:
         """Initialize the explorer and configure the Dash application.
 
         Sets up the application layout and registers all interactive callbacks.
         Does not start the web server; call :meth:`run` separately.
 
-        :param db_path: Path to SQLite database file containing ``emojis`` table.
+        :param db_paths: List of paths to SQLite database files containing ``emojis`` table.
         """
-        self.db_path = db_path
+        self.db_paths = db_paths
         self.app = dash.Dash(__name__)
         self.setup_layout()
         self.setup_callbacks()
 
-    def get_usernames(self) -> list[str]:
-        """Query database for all unique usernames.
+    def _query_all_databases(self, query: str, params: list[str] | None = None) -> pd.DataFrame:
+        """Execute a query against all databases and combine results.
 
-        Returns a list of all distinct usernames that appear in the database,
-        sorted alphabetically.
+        When multiple databases are used, adds a suffix to chat_name column
+        based on the database file stem.
 
+        :param query: SQL query to execute.
+        :param params: Optional query parameters.
+        :returns: Combined DataFrame from all databases.
+        """
+        dfs: list[pd.DataFrame] = []
+        use_suffix = len(self.db_paths) > 1
+
+        for db_path in self.db_paths:
+            conn = sqlite3.connect(db_path)
+            df = pd.read_sql(query, conn, params=params if params else None)
+            conn.close()
+
+            if use_suffix and "chat_name" in df.columns:
+                suffix = f" ({db_path.stem})"
+                df["chat_name"] = df["chat_name"] + suffix
+
+            dfs.append(df)
+
+        if not dfs:
+            return pd.DataFrame()
+
+        return pd.concat(dfs, ignore_index=True)
+
+    def get_usernames(self, chat_name: str | None = None) -> list[str]:
+        """Query database(s) for unique usernames, optionally filtered by chat.
+
+        Returns a list of all distinct usernames that appear in the database(s),
+        sorted alphabetically. If chat_name is provided, only returns users who
+        have messages in that chat.
+
+        :param chat_name: Optional chat name to filter by.
         :returns: List of username strings.
         """
-        query = """
-            SELECT DISTINCT username
-            FROM emojis
-            ORDER BY username
+        if chat_name:
+            usernames = self._get_usernames_for_chat(chat_name)
+        else:
+            query = "SELECT DISTINCT username FROM emojis"
+            df = self._query_all_databases(query)
+            if df.empty:
+                return []
+            usernames = df["username"].unique().tolist()
+
+        return sorted(usernames)
+
+    def _get_usernames_for_chat(self, chat_name: str) -> list[str]:
+        """Get usernames that have messages in a specific chat.
+
+        :param chat_name: Chat name to filter by (may include DB suffix).
+        :returns: List of username strings.
         """
+        use_suffix = len(self.db_paths) > 1
+        usernames: set[str] = set()
 
-        conn = sqlite3.connect(self.db_path)
-        df = pd.read_sql(query, conn)
-        conn.close()
+        for db_path in self.db_paths:
+            if use_suffix:
+                suffix = f" ({db_path.stem})"
+                if chat_name.endswith(suffix):
+                    original_name = chat_name[: -len(suffix)]
+                else:
+                    continue
+            else:
+                original_name = chat_name
 
-        return df["username"].tolist()
+            query = "SELECT DISTINCT username FROM emojis WHERE chat_name = ?"
+            conn = sqlite3.connect(db_path)
+            df = pd.read_sql(query, conn, params=[original_name])
+            conn.close()
 
-    def get_chat_names(self) -> list[str]:
-        """Query database for all unique chat names.
+            usernames.update(df["username"].tolist())
 
-        Returns a list of all distinct chat names that appear in the database,
-        sorted alphabetically.
+        return list(usernames)
 
+    def get_chat_names(self, username: str | None = None) -> list[str]:
+        """Query database(s) for unique chat names, optionally filtered by user.
+
+        Returns a list of all distinct chat names that appear in the database(s),
+        sorted alphabetically. When multiple databases are used, chat names include
+        a suffix indicating the source database. If username is provided, only
+        returns chats where that user has messages.
+
+        :param username: Optional username to filter by.
         :returns: List of chat name strings.
         """
-        query = """
-            SELECT DISTINCT chat_name
-            FROM emojis
-            ORDER BY chat_name
-        """
+        use_suffix = len(self.db_paths) > 1
+        chat_names: list[str] = []
 
-        conn = sqlite3.connect(self.db_path)
-        df = pd.read_sql(query, conn)
-        conn.close()
+        for db_path in self.db_paths:
+            if username:
+                query = "SELECT DISTINCT chat_name FROM emojis WHERE username = ?"
+                params: list[str] | None = [username]
+            else:
+                query = "SELECT DISTINCT chat_name FROM emojis"
+                params = None
 
-        return df["chat_name"].tolist()
+            conn = sqlite3.connect(db_path)
+            df = pd.read_sql(query, conn, params=params)
+            conn.close()
+
+            names = df["chat_name"].tolist()
+            if use_suffix:
+                suffix = f" ({db_path.stem})"
+                names = [name + suffix for name in names]
+
+            chat_names.extend(names)
+
+        return sorted(set(chat_names))
 
     def get_emoji_counts(
         self, username: str | None = None, chat_name: str | None = None
     ) -> pd.DataFrame:
-        """Query database for total occurrence count of each emoji.
+        """Query database(s) for total occurrence count of each emoji.
 
         Aggregates all emoji occurrences across all messages and dates, returning
         emojis sorted by frequency (most common first). Optionally filters by username
@@ -91,37 +167,68 @@ class EmojiExplorer:
         :param chat_name: Optional chat name to filter by. If None, includes all chats.
         :returns: DataFrame with columns ``emoji`` and ``count``.
         """
-        # Build WHERE clause based on filters
-        where_clauses: list[str] = []
-        params: list[str] = []
+        # For chat_name filter with multiple DBs, we need to handle the suffix
+        use_suffix = len(self.db_paths) > 1
 
-        if username:
-            where_clauses.append("username = ?")
-            params.append(username)
-        if chat_name:
-            where_clauses.append("chat_name = ?")
-            params.append(chat_name)
+        dfs: list[pd.DataFrame] = []
 
-        where_clause = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+        for db_path in self.db_paths:
+            # Build WHERE clause based on filters
+            where_clauses: list[str] = []
+            params: list[str] = []
 
-        query = f"""
-            SELECT emoji, COUNT(*) as count
-            FROM emojis
-            {where_clause}
-            GROUP BY emoji
-            ORDER BY count DESC
-        """
+            if username:
+                where_clauses.append("username = ?")
+                params.append(username)
 
-        conn = sqlite3.connect(self.db_path)
-        df = pd.read_sql(query, conn, params=params if params else None)
-        conn.close()
+            if chat_name:
+                if use_suffix:
+                    # Check if this chat_name belongs to this database
+                    suffix = f" ({db_path.stem})"
+                    if chat_name.endswith(suffix):
+                        # Strip suffix and filter by original name
+                        original_name = chat_name[: -len(suffix)]
+                        where_clauses.append("chat_name = ?")
+                        params.append(original_name)
+                    else:
+                        # This chat_name doesn't belong to this database
+                        continue
+                else:
+                    where_clauses.append("chat_name = ?")
+                    params.append(chat_name)
 
-        return df
+            where_clause = (
+                " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+            )
+
+            query = f"""
+                SELECT emoji, COUNT(*) as count
+                FROM emojis
+                {where_clause}
+                GROUP BY emoji
+            """
+
+            conn = sqlite3.connect(db_path)
+            df = pd.read_sql(query, conn, params=params if params else None)
+            conn.close()
+
+            dfs.append(df)
+
+        if not dfs:
+            return pd.DataFrame(columns=["emoji", "count"])
+
+        # Combine and re-aggregate
+        combined = pd.concat(dfs, ignore_index=True)
+        if combined.empty:
+            return pd.DataFrame(columns=["emoji", "count"])
+
+        result = combined.groupby("emoji", as_index=False)["count"].sum()
+        return result.sort_values("count", ascending=False)
 
     def get_emoji_time_series(
         self, username: str | None = None, chat_name: str | None = None
     ) -> pd.DataFrame:
-        """Query database for individual emoji occurrences with timestamps.
+        """Query database(s) for individual emoji occurrences with timestamps.
 
         Returns raw emoji data without aggregation. Each row represents one
         emoji occurrence with its full timestamp. Optionally filters by username
@@ -131,33 +238,54 @@ class EmojiExplorer:
         :param chat_name: Optional chat name to filter by. If None, includes all chats.
         :returns: DataFrame with columns ``timestamp`` and ``emoji``.
         """
-        # Build WHERE clause based on filters
-        where_clauses: list[str] = []
-        params: list[str] = []
+        use_suffix = len(self.db_paths) > 1
 
-        if username:
-            where_clauses.append("username = ?")
-            params.append(username)
-        if chat_name:
-            where_clauses.append("chat_name = ?")
-            params.append(chat_name)
+        dfs: list[pd.DataFrame] = []
 
-        where_clause = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+        for db_path in self.db_paths:
+            # Build WHERE clause based on filters
+            where_clauses: list[str] = []
+            params: list[str] = []
 
-        query = f"""
-            SELECT 
-                timestamp,
-                emoji
-            FROM emojis
-            {where_clause}
-            ORDER BY timestamp
-        """
+            if username:
+                where_clauses.append("username = ?")
+                params.append(username)
 
-        conn = sqlite3.connect(self.db_path)
-        df = pd.read_sql(query, conn, params=params if params else None)
-        conn.close()
+            if chat_name:
+                if use_suffix:
+                    # Check if this chat_name belongs to this database
+                    suffix = f" ({db_path.stem})"
+                    if chat_name.endswith(suffix):
+                        original_name = chat_name[: -len(suffix)]
+                        where_clauses.append("chat_name = ?")
+                        params.append(original_name)
+                    else:
+                        continue
+                else:
+                    where_clauses.append("chat_name = ?")
+                    params.append(chat_name)
 
-        return df
+            where_clause = (
+                " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+            )
+
+            query = f"""
+                SELECT timestamp, emoji
+                FROM emojis
+                {where_clause}
+            """
+
+            conn = sqlite3.connect(db_path)
+            df = pd.read_sql(query, conn, params=params if params else None)
+            conn.close()
+
+            dfs.append(df)
+
+        if not dfs:
+            return pd.DataFrame(columns=["timestamp", "emoji"])
+
+        combined = pd.concat(dfs, ignore_index=True)
+        return combined.sort_values("timestamp")
 
     def add_toggle_buttons(self, fig: go.Figure) -> go.Figure:
         """Add Show All / Hide All toggle buttons to a Plotly figure.
@@ -198,24 +326,8 @@ class EmojiExplorer:
 
         Creates dropdowns for chart type, user, and chat selection, and a graph
         container for plots. The layout is assigned to :attr:`self.app.layout`.
+        Dropdown options are populated dynamically via callbacks.
         """
-        # Get list of usernames for dropdown
-        usernames = self.get_usernames()
-        # If "You" is in the list, move it to the top
-        if "You" in usernames:
-            usernames.remove("You")
-            usernames.insert(0, "You")
-
-        user_options: list[dict[str, str]] = [
-            {"label": "Everyone", "value": "everyone"}
-        ] + [{"label": username, "value": username} for username in usernames]
-
-        # Get list of chat names for dropdown
-        chat_names = self.get_chat_names()
-        chat_options: list[dict[str, str]] = [
-            {"label": "All Chats", "value": "all"}
-        ] + [{"label": chat_name, "value": chat_name} for chat_name in chat_names]
-
         self.app.layout = html.Div(
             [
                 html.H1("🎭 Emoji Explorer 📊", style={"textAlign": "center"}),
@@ -243,7 +355,6 @@ class EmojiExplorer:
                                 html.Label("User:"),
                                 dcc.Dropdown(
                                     id="user-filter",
-                                    options=user_options,
                                     value="everyone",
                                     clearable=False,
                                     style={"width": "200px"},
@@ -256,7 +367,6 @@ class EmojiExplorer:
                                 html.Label("Chat:"),
                                 dcc.Dropdown(
                                     id="chat-filter",
-                                    options=chat_options,
                                     value="all",
                                     clearable=False,
                                     style={"width": "200px"},
@@ -273,12 +383,62 @@ class EmojiExplorer:
             ]
         )
 
-    def setup_callbacks(self) -> None:
-        """Register interactive callback for chart updates.
+    def _build_user_options(self, chat_name: str | None = None) -> list[dict[str, str]]:
+        """Build user dropdown options, optionally filtered by chat.
 
-        Creates a callback to regenerate the plot when chart type, user, or chat filter changes.
-        The callback is registered with the :attr:`self.app` instance.
+        :param chat_name: Optional chat name to filter users by.
+        :returns: List of dropdown option dicts with label and value.
         """
+        usernames = self.get_usernames(chat_name)
+        # If "You" is in the list, move it to the top
+        if "You" in usernames:
+            usernames.remove("You")
+            usernames.insert(0, "You")
+
+        return [{"label": "Everyone", "value": "everyone"}] + [
+            {"label": username, "value": username} for username in usernames
+        ]
+
+    def _build_chat_options(self, username: str | None = None) -> list[dict[str, str]]:
+        """Build chat dropdown options, optionally filtered by user.
+
+        :param username: Optional username to filter chats by.
+        :returns: List of dropdown option dicts with label and value.
+        """
+        chat_names = self.get_chat_names(username)
+
+        return [{"label": "All Chats", "value": "all"}] + [
+            {"label": chat_name, "value": chat_name} for chat_name in chat_names
+        ]
+
+    def setup_callbacks(self) -> None:
+        """Register interactive callbacks for chart and filter updates.
+
+        Creates callbacks to:
+        1. Update user dropdown options based on selected chat
+        2. Update chat dropdown options based on selected user
+        3. Regenerate the plot when any filter changes
+
+        The callbacks are registered with the :attr:`self.app` instance.
+        """
+
+        @self.app.callback(
+            Output("user-filter", "options"),
+            Input("chat-filter", "value"),
+        )
+        def update_user_options(selected_chat: str) -> list[dict[str, str]]:
+            """Update user dropdown options based on selected chat."""
+            chat_name = None if selected_chat == "all" else selected_chat
+            return self._build_user_options(chat_name)
+
+        @self.app.callback(
+            Output("chat-filter", "options"),
+            Input("user-filter", "value"),
+        )
+        def update_chat_options(selected_user: str) -> list[dict[str, str]]:
+            """Update chat dropdown options based on selected user."""
+            username = None if selected_user == "everyone" else selected_user
+            return self._build_chat_options(username)
 
         @self.app.callback(
             Output("emoji-frequency-plot", "figure"),
@@ -420,23 +580,24 @@ class EmojiExplorer:
     def run(self, debug: bool = True, port: int = 8050) -> None:
         """Start the Dash web server and block until interrupted.
 
-        Prints the database path and server URL to stdout, then starts the
+        Prints the database path(s) and server URL to stdout, then starts the
         Flask development server. Blocks indefinitely until interrupted (Ctrl+C).
 
         :param debug: Enable debug mode with auto-reload and detailed errors.
         :param port: TCP port to bind the server to.
         """
-        print(f"Loading data from: {self.db_path}")
+        for db_path in self.db_paths:
+            print(f"Loading data from: {db_path}")
         print(f"Starting Dash app on http://127.0.0.1:{port}")
         self.app.run(debug=debug, port=port)
 
 
 def main() -> int | None:
-    """Parse arguments, validate database path, and launch the dashboard.
+    """Parse arguments, validate database paths, and launch the dashboard.
 
-    Parses command-line arguments for database path and server options. Validates
-    that the database file exists before initializing :class:`EmojiExplorer`.
-    Returns exit code ``1`` if the database is not found, otherwise blocks until
+    Parses command-line arguments for database path(s) and server options. Validates
+    that all database files exist before initializing :class:`EmojiExplorer`.
+    Returns exit code ``1`` if any database is not found, otherwise blocks until
     the server is interrupted.
 
     :returns: Exit code ``1`` on error, or does not return if server starts successfully.
@@ -444,7 +605,12 @@ def main() -> int | None:
     parser = argparse.ArgumentParser(
         description="Interactive dashboard for exploring emoji data"
     )
-    parser.add_argument("db_path", type=str, help="Path to the SQLite database file")
+    parser.add_argument(
+        "db_paths",
+        type=str,
+        nargs="+",
+        help="Path(s) to SQLite database file(s)",
+    )
     parser.add_argument(
         "--port",
         type=int,
@@ -455,13 +621,15 @@ def main() -> int | None:
 
     args = parser.parse_args()
 
-    db_path = Path(args.db_path)
+    db_paths: list[Path] = []
+    for path_str in args.db_paths:
+        db_path = Path(path_str)
+        if not db_path.exists():
+            print(f"Error: Database file not found: {db_path}")
+            return 1
+        db_paths.append(db_path)
 
-    if not db_path.exists():
-        print(f"Error: Database file not found: {db_path}")
-        return 1
-
-    explorer = EmojiExplorer(db_path)
+    explorer = EmojiExplorer(db_paths)
     explorer.run(debug=not args.no_debug, port=args.port)
     return None
 
