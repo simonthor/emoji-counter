@@ -51,12 +51,12 @@ class EmojiExplorer:
             FROM emojis
             ORDER BY username
         """
-        
+
         conn = sqlite3.connect(self.db_path)
         df = pd.read_sql(query, conn)
         conn.close()
-        
-        return df['username'].tolist()
+
+        return df["username"].tolist()
 
     def get_chat_names(self):
         """Query database for all unique chat names.
@@ -71,12 +71,12 @@ class EmojiExplorer:
             FROM emojis
             ORDER BY chat_name
         """
-        
+
         conn = sqlite3.connect(self.db_path)
         df = pd.read_sql(query, conn)
         conn.close()
-        
-        return df['chat_name'].tolist()
+
+        return df["chat_name"].tolist()
 
     def get_emoji_counts(self, username=None, chat_name=None):
         """Query database for total occurrence count of each emoji.
@@ -92,16 +92,16 @@ class EmojiExplorer:
         # Build WHERE clause based on filters
         where_clauses = []
         params = []
-        
+
         if username:
             where_clauses.append("username = ?")
             params.append(username)
         if chat_name:
             where_clauses.append("chat_name = ?")
             params.append(chat_name)
-        
+
         where_clause = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
-        
+
         query = f"""
             SELECT emoji, COUNT(*) as count
             FROM emojis
@@ -109,11 +109,11 @@ class EmojiExplorer:
             GROUP BY emoji
             ORDER BY count DESC
         """
-        
+
         conn = sqlite3.connect(self.db_path)
         df = pd.read_sql(query, conn, params=params if params else None)
         conn.close()
-        
+
         return df
 
     def get_emoji_time_series(self, username=None, chat_name=None):
@@ -130,16 +130,16 @@ class EmojiExplorer:
         # Build WHERE clause based on filters
         where_clauses = []
         params = []
-        
+
         if username:
             where_clauses.append("username = ?")
             params.append(username)
         if chat_name:
             where_clauses.append("chat_name = ?")
             params.append(chat_name)
-        
+
         where_clause = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
-        
+
         query = f"""
             SELECT 
                 timestamp,
@@ -148,11 +148,11 @@ class EmojiExplorer:
             {where_clause}
             ORDER BY timestamp
         """
-        
+
         conn = sqlite3.connect(self.db_path)
         df = pd.read_sql(query, conn, params=params if params else None)
         conn.close()
-        
+
         return df
 
     def add_toggle_buttons(self, fig):
@@ -171,21 +171,19 @@ class EmojiExplorer:
                     direction="left",
                     buttons=[
                         dict(
-                            args=[{"visible": True}],
-                            label="Show All",
-                            method="restyle"
+                            args=[{"visible": True}], label="Show All", method="restyle"
                         ),
                         dict(
                             args=[{"visible": "legendonly"}],
                             label="Hide All",
-                            method="restyle"
+                            method="restyle",
                         ),
                     ],
                     showactive=False,
                     x=0,
                     xanchor="left",
                     y=1.15,
-                    yanchor="top"
+                    yanchor="top",
                 ),
             ]
         )
@@ -203,17 +201,17 @@ class EmojiExplorer:
         if "You" in usernames:
             usernames.remove("You")
             usernames.insert(0, "You")
-        
+
         user_options = [{"label": "Everyone", "value": "everyone"}] + [
             {"label": username, "value": username} for username in usernames
         ]
-        
+
         # Get list of chat names for dropdown
         chat_names = self.get_chat_names()
         chat_options = [{"label": "All Chats", "value": "all"}] + [
             {"label": chat_name, "value": chat_name} for chat_name in chat_names
         ]
-        
+
         self.app.layout = html.Div(
             [
                 html.H1("🎭 Emoji Explorer 📊", style={"textAlign": "center"}),
@@ -282,7 +280,7 @@ class EmojiExplorer:
             Output("emoji-frequency-plot", "figure"),
             Input("chart-type", "value"),
             Input("user-filter", "value"),
-            Input("chat-filter", "value")
+            Input("chat-filter", "value"),
         )
         def update_plot(chart_type, selected_user, selected_chat):
             """Generate a Plotly figure based on selected chart type and filters.
@@ -300,7 +298,7 @@ class EmojiExplorer:
             # Convert dropdown values to None for query methods
             username = None if selected_user == "everyone" else selected_user
             chat_name = None if selected_chat == "all" else selected_chat
-            
+
             if chart_type == "timeseries":
                 # Get time series data from SQL
                 df = self.get_emoji_time_series(username, chat_name)
@@ -313,38 +311,43 @@ class EmojiExplorer:
                     )
 
                 # Add cumulative count column
-                df['count'] = 1
-                df = df.sort_values('timestamp')
-                df['cumcount'] = df.groupby('emoji')['count'].cumsum()
+                df["count"] = 1
+                df = df.sort_values("timestamp")
+                df["cumcount"] = df.groupby("emoji")["count"].cumsum()
 
                 # Get emoji order by final cumsum value (descending)
-                emoji_order = df.groupby('emoji')['cumcount'].last().sort_values(ascending=False).index.tolist()
+                emoji_order = (
+                    df.groupby("emoji")["cumcount"]
+                    .last()
+                    .sort_values(ascending=False)
+                    .index.tolist()
+                )
 
                 # Create figure using plotly express with category order
                 fig = px.line(
                     df,
-                    x='timestamp',
-                    y='cumcount',
-                    color='emoji',
-                    title='Emoji Usage Over Time',
-                    category_orders={'emoji': emoji_order}
+                    x="timestamp",
+                    y="cumcount",
+                    color="emoji",
+                    title="Emoji Usage Over Time",
+                    category_orders={"emoji": emoji_order},
                 )
-                
+
                 # Calculate and add total line
                 df_total = df.copy()
-                df_total['total'] = df_total['count'].cumsum()
-                
+                df_total["total"] = df_total["count"].cumsum()
+
                 fig.add_trace(
                     go.Scatter(
-                        x=df_total['timestamp'],
-                        y=df_total['total'],
+                        x=df_total["timestamp"],
+                        y=df_total["total"],
                         mode="lines",
                         name="Total",
                         line=dict(color="black"),
                         hovertemplate="<b>Total</b><br>Date: %{x}<br>Count: %{y}<extra></extra>",
                     )
                 )
-                
+
                 # Move Total trace to the top of the legend
                 fig.data = (fig.data[-1],) + fig.data[:-1]
 
@@ -401,8 +404,8 @@ class EmojiExplorer:
                     legend_title="emoji",
                 )
                 fig.update_traces(
-                    textposition='inside',
-                    textinfo='label+percent+value',
+                    textposition="inside",
+                    textinfo="label+percent+value",
                     hovertemplate="<b>%{label}</b><br>Count: %{value}<br>Percentage: %{percent}<extra></extra>",
                 )
 
