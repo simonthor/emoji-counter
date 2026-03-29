@@ -27,6 +27,7 @@ debug = [
 [project.scripts]
 emoji-extract = "emoji_counter.emoji_extract:main"
 emoji-explore = "emoji_counter.explore:main"
+message-convert = "emoji_counter.message_convert:main"
 
 [tool.uv]
 package = true
