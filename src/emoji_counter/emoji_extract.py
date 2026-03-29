@@ -101,14 +101,14 @@ def process_input(input_path: Path) -> pd.DataFrame:
     return df
 
 
-def export_to_sqlite(df: pd.DataFrame, output_path: Path):
+def export_to_sqlite(df: pd.DataFrame, output_path: Path) -> None:
     """Export DataFrame to SQLite database."""
     conn = sqlite3.connect(output_path)
     df.to_sql("emojis", conn, if_exists="replace", index=False)
     conn.close()
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Extract emojis from chat message files and export to SQLite database"
     )

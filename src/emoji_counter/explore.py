@@ -25,7 +25,7 @@ class EmojiExplorer:
     Must call :meth:`run` to start the web server after initialization.
     """
 
-    def __init__(self, db_path: Path):
+    def __init__(self, db_path: Path) -> None:
         """Initialize the explorer and configure the Dash application.
 
         Sets up the application layout and registers all interactive callbacks.
@@ -38,7 +38,7 @@ class EmojiExplorer:
         self.setup_layout()
         self.setup_callbacks()
 
-    def get_usernames(self):
+    def get_usernames(self) -> list[str]:
         """Query database for all unique usernames.
 
         Returns a list of all distinct usernames that appear in the database,
@@ -58,7 +58,7 @@ class EmojiExplorer:
 
         return df["username"].tolist()
 
-    def get_chat_names(self):
+    def get_chat_names(self) -> list[str]:
         """Query database for all unique chat names.
 
         Returns a list of all distinct chat names that appear in the database,
@@ -78,7 +78,9 @@ class EmojiExplorer:
 
         return df["chat_name"].tolist()
 
-    def get_emoji_counts(self, username=None, chat_name=None):
+    def get_emoji_counts(
+        self, username: str | None = None, chat_name: str | None = None
+    ) -> pd.DataFrame:
         """Query database for total occurrence count of each emoji.
 
         Aggregates all emoji occurrences across all messages and dates, returning
@@ -90,8 +92,8 @@ class EmojiExplorer:
         :returns: DataFrame with columns ``emoji`` and ``count``.
         """
         # Build WHERE clause based on filters
-        where_clauses = []
-        params = []
+        where_clauses: list[str] = []
+        params: list[str] = []
 
         if username:
             where_clauses.append("username = ?")
@@ -116,7 +118,9 @@ class EmojiExplorer:
 
         return df
 
-    def get_emoji_time_series(self, username=None, chat_name=None):
+    def get_emoji_time_series(
+        self, username: str | None = None, chat_name: str | None = None
+    ) -> pd.DataFrame:
         """Query database for individual emoji occurrences with timestamps.
 
         Returns raw emoji data without aggregation. Each row represents one
@@ -128,8 +132,8 @@ class EmojiExplorer:
         :returns: DataFrame with columns ``timestamp`` and ``emoji``.
         """
         # Build WHERE clause based on filters
-        where_clauses = []
-        params = []
+        where_clauses: list[str] = []
+        params: list[str] = []
 
         if username:
             where_clauses.append("username = ?")
@@ -155,7 +159,7 @@ class EmojiExplorer:
 
         return df
 
-    def add_toggle_buttons(self, fig):
+    def add_toggle_buttons(self, fig: go.Figure) -> go.Figure:
         """Add Show All / Hide All toggle buttons to a Plotly figure.
 
         Adds an updatemenus configuration with two buttons that control the
@@ -189,7 +193,7 @@ class EmojiExplorer:
         )
         return fig
 
-    def setup_layout(self):
+    def setup_layout(self) -> None:
         """Configure the Dash application layout with controls and plot area.
 
         Creates dropdowns for chart type, user, and chat selection, and a graph
@@ -202,15 +206,15 @@ class EmojiExplorer:
             usernames.remove("You")
             usernames.insert(0, "You")
 
-        user_options = [{"label": "Everyone", "value": "everyone"}] + [
-            {"label": username, "value": username} for username in usernames
-        ]
+        user_options: list[dict[str, str]] = [
+            {"label": "Everyone", "value": "everyone"}
+        ] + [{"label": username, "value": username} for username in usernames]
 
         # Get list of chat names for dropdown
         chat_names = self.get_chat_names()
-        chat_options = [{"label": "All Chats", "value": "all"}] + [
-            {"label": chat_name, "value": chat_name} for chat_name in chat_names
-        ]
+        chat_options: list[dict[str, str]] = [
+            {"label": "All Chats", "value": "all"}
+        ] + [{"label": chat_name, "value": chat_name} for chat_name in chat_names]
 
         self.app.layout = html.Div(
             [
@@ -269,7 +273,7 @@ class EmojiExplorer:
             ]
         )
 
-    def setup_callbacks(self):
+    def setup_callbacks(self) -> None:
         """Register interactive callback for chart updates.
 
         Creates a callback to regenerate the plot when chart type, user, or chat filter changes.
@@ -282,7 +286,9 @@ class EmojiExplorer:
             Input("user-filter", "value"),
             Input("chat-filter", "value"),
         )
-        def update_plot(chart_type, selected_user, selected_chat):
+        def update_plot(
+            chart_type: str, selected_user: str, selected_chat: str
+        ) -> go.Figure:
             """Generate a Plotly figure based on selected chart type and filters.
 
             Queries the database via :meth:`get_emoji_counts` or
@@ -319,7 +325,7 @@ class EmojiExplorer:
                 emoji_order = (
                     df.groupby("emoji")["cumcount"]
                     .last()
-                    .sort_values(ascending=False)
+                    .sort_values(ascending=False) # type: ignore
                     .index.tolist()
                 )
 
@@ -411,7 +417,7 @@ class EmojiExplorer:
 
             return self.add_toggle_buttons(fig)
 
-    def run(self, debug=True, port=8050):
+    def run(self, debug: bool = True, port: int = 8050) -> None:
         """Start the Dash web server and block until interrupted.
 
         Prints the database path and server URL to stdout, then starts the
@@ -425,7 +431,7 @@ class EmojiExplorer:
         self.app.run(debug=debug, port=port)
 
 
-def main():
+def main() -> int | None:
     """Parse arguments, validate database path, and launch the dashboard.
 
     Parses command-line arguments for database path and server options. Validates
@@ -457,6 +463,7 @@ def main():
 
     explorer = EmojiExplorer(db_path)
     explorer.run(debug=not args.no_debug, port=args.port)
+    return None
 
 
 if __name__ == "__main__":
