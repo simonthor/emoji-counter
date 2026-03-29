@@ -214,14 +214,16 @@ source = { editable = "." }
 dependencies = [
     { name = "dash" },
     { name = "emoji" },
-    { name = "ipykernel" },
-    { name = "nbformat" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "plotly" },
 ]
 
 [package.dev-dependencies]
+debug = [
+    { name = "ipykernel" },
+    { name = "nbformat" },
+]
 dev = [
     { name = "pytest" },
     { name = "ruff" },
@@ -232,14 +234,16 @@ dev = [
 requires-dist = [
     { name = "dash", specifier = ">=4.1.0" },
     { name = "emoji", specifier = ">=2.15.0" },
-    { name = "ipykernel", specifier = ">=7.2.0" },
-    { name = "nbformat", specifier = ">=5.10.4" },
     { name = "numpy", specifier = ">=2.4.3" },
     { name = "pandas", specifier = ">=3.0.1" },
     { name = "plotly", specifier = ">=6.6.0" },
 ]
 
 [package.metadata.requires-dev]
+debug = [
+    { name = "ipykernel", specifier = ">=7.2.0" },
+    { name = "nbformat", specifier = ">=5.10.4" },
+]
 dev = [
     { name = "pytest" },
     { name = "ruff" },
