@@ -1,0 +1,38 @@
+[project]
+name = "emoji-counter"
+version = "0.1.0"
+description = "Count emojis in your text data"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "numpy>=2.4.3",
+    "pandas>=3.0.1",
+    "plotly>=6.6.0",
+    "emoji>=2.15.0",
+    "ipykernel>=7.2.0",
+    "nbformat>=5.10.4",
+]
+
+[dependency-groups]
+dev = [
+  "pytest",
+  "ruff",
+  "ty"
+]
+
+[project.scripts]
+emoji-extract = "emoji_counter.emoji_extract:main"
+
+[tool.uv]
+package = true
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[build-system]
+requires = ["uv_build>=0.10.9,<0.11.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "emoji_counter"
+module-root = "src"
