@@ -6,9 +6,11 @@ Extract and visualize emoji usage from chat messages.
 ## Features
 
 - **Extract emojis** from chat message files into a SQLite database
+- **Convert chat exports** from WhatsApp and other formats to the supported format
 - **Interactive dashboard** to explore emoji usage patterns
 - **Multiple visualizations**: Bar chart, Pie chart, and Time series
 - **Filter by user or chat** to analyze specific conversations
+- **Multi-database support** to combine and compare data from different sources
 - **Cumulative time series** showing emoji usage growth over time
 
 ## Installation
@@ -37,9 +39,13 @@ pip install .
 
 ### 1. Prepare Message Files
 
-The format that the current program supports is the output format from [sigtop](https://github.com/tbvdm/sigtop/), which is a tool to extract messages from Signal desktop. To install and run `sigtop`, follow the instructions in their repository. Other output formats are planned to be supported in the future.
+The program supports two main sources for chat exports: Signal (via sigtop) and WhatsApp.
 
-`sigtop` will create a directory with text files containing the messages from each chat. This will be of the format
+#### Signal Messages (via sigtop)
+
+The program supports the output format from [sigtop](https://github.com/tbvdm/sigtop/), which is a tool to extract messages from Signal desktop. To install and run `sigtop`, follow the instructions in their repository.
+
+`sigtop` will create a directory with text files containing the messages from each chat:
 ```
 messages/
 ├── FirstName1 LastName1 (phone number or unique ID).txt
@@ -47,7 +53,8 @@ messages/
 ├── Group Chat (unique ID).txt
 ...
 ```
-The format of the messages in these files is as follows:
+
+Each file contains messages in the following format:
 ```
 Conversation: FirstName1 LastName1 (unique ID)
 
@@ -58,15 +65,52 @@ Received: Tue, 13 Aug 2024 14:45:13 +0200
 
 Lorem ipsum... 😄
 
-From: FirstName1 LastName1 (unique ID)
-Type: incoming
-Sent: Tue, 13 Aug 2024 09:31:00 +0200
-Received: Tue, 13 Aug 2024 14:45:13 +0200
+From: You
+Type: outgoing
+Sent: Fri, 4 Oct 2024 17:53:47 +0200
 
-Dorot sit amet... 😂
+consectetur adipiscing elit... 🤔
 ```
 
-The only fields that the extractor uses are `From:`, `Sent:`, chat name (derived from the filename), and the message text itself. Therefore, it should be relatively easy to convert other chat message formats to this format if needed.
+#### WhatsApp Messages
+
+You can get your WhatsApp chat messages by following the instructions [here](https://faq.whatsapp.com/1180414079177245/). 
+Make sure to export the chats without media for easier processing.
+Unfortunately, WhatsApp only allows one to export one chat at a time, so if you want to analyze multiple chats, you will need to export each of them separately.
+Blame Meta, not me 😓
+
+You can then convert them to the supported format using the `message-convert` tool:
+
+```bash
+# Convert a single WhatsApp export
+message-convert -i "WhatsApp-chatt med John Doe.txt" -o "converted/John Doe (Whatsapp).txt" \
+    --your-name "Your Name" \
+    --name-pattern "WhatsApp-chatt med %s"
+
+# Convert all WhatsApp exports in a directory
+message-convert -i whatsapp_exports/ -o converted/ \
+    --your-name "Your Name" \
+    --name-pattern "WhatsApp-chatt med %s"
+```
+
+**Options:**
+- `-i, --input` (required): Input file or directory containing WhatsApp exports
+- `-o, --output` (required): Output file or directory for converted files
+- `--your-name`: Your display name in WhatsApp (messages from you will be marked as "You")
+- `--name-pattern`: Pattern to extract chat name from filename using `%s` as placeholder
+  - For Swedish WhatsApp: `"WhatsApp-chatt med %s"`
+  - For English WhatsApp: `"WhatsApp Chat with %s"`
+  - Custom patterns like `"Chat_%s_export"` are also supported
+
+**Note:** When converting a directory, output files are renamed to `{chat_name} (Whatsapp).txt` to distinguish the source.
+
+WhatsApp exports typically have this format:
+```
+2025-06-05 19:42 - Alice: Hello there!
+2025-06-05 20:12 - Bob: Hi Alice 🙏
+```
+
+The converter transforms this into the standard `sigtop` format used by this tool.
 
 ### 2. Extract Emojis
 
@@ -92,12 +136,17 @@ emoji-extract -i messages/ -o data/emojis.sql
 Launch the interactive dashboard to visualize emoji usage:
 
 ```bash
+# Single database
 emoji-explore data/emojis.sql
+
+# Multiple databases (combine Signal and WhatsApp data)
+emoji-explore data/signal.sql data/whatsapp.sql
 ```
 
-The first argument is the path to the SQLite database created by the extractor. You can also specify additional options:
+When multiple databases are provided, chat names are automatically suffixed with the database filename (e.g., "John Doe (signal)", "Alice (whatsapp)") to distinguish between sources.
 
 **Options:**
+- `db_paths` (required): One or more paths to SQLite databases created by the extractor
 - `--port` (default: 8050): Port to run the Dash app on
 - `--no-debug`: Disable debug mode
 
@@ -114,7 +163,12 @@ Then open your browser to http://127.0.0.1:8050
 ### Filters
 
 - **User**: Filter by a specific user or view everyone's emojis
+  - When a chat is selected, only users in that chat are shown
 - **Chat**: Filter by a specific chat or view all chats
+  - When a user is selected, only chats where that user has messages are shown
+- Filters update dynamically based on each other's selection
+
+To show all the chats or all the users again, simply select the "Everyone" or "All chats" options in the dropdowns.
 
 ### Interactive Controls
 
