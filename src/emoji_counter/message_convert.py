@@ -3,9 +3,9 @@
 Convert chat exports from various formats to sigtop format for use with emoji-extract.
 
 Supported formats:
-- WhatsApp: ``YYYY-MM-DD HH:MM - Username: Message``
+- WhatsApp: YYYY-MM-DD HH:MM - Username: Message
 
-Sigtop output format: Multi-line blocks with ``From:``, ``Type:``, ``Sent:`` headers.
+Sigtop output format: Multi-line blocks with From:, Type:, Sent: headers.
 """
 
 import argparse
@@ -22,30 +22,45 @@ WHATSAPP_MSG_PATTERN = re.compile(
 
 @dataclass
 class Message:
-    """Parsed chat message with timestamp, sender, and content."""
+    """
+    Parsed chat message with timestamp, sender, and content.
+
+    Attributes
+    ----------
+    timestamp : datetime
+        Message timestamp.
+    sender : str
+        Display name of the message sender.
+    content : str
+        Message text content.
+    """
 
     timestamp: datetime
-    """Message timestamp."""
-
     sender: str
-    """Display name of the message sender."""
-
     content: str
-    """Message text content."""
 
 
 def parse_whatsapp_file(
     file_path: Path, your_name: str | None = None
 ) -> list[Message]:
-    """Parse a WhatsApp chat export file into a list of messages.
+    """
+    Parse a WhatsApp chat export file into a list of messages.
 
     Handles multi-line messages by accumulating content until the next
     timestamp line. Skips system messages (lines without a sender).
 
-    :param file_path: Path to the WhatsApp export text file.
-    :param your_name: Your display name in WhatsApp. If provided, messages from
+    Parameters
+    ----------
+    file_path : Path
+        Path to the WhatsApp export text file.
+    your_name : str, optional
+        Your display name in WhatsApp. If provided, messages from
         this sender will be marked as "You" in the output.
-    :returns: List of parsed messages in chronological order.
+
+    Returns
+    -------
+    list of Message
+        List of parsed messages in chronological order.
     """
     messages: list[Message] = []
     current_msg: Message | None = None
@@ -84,26 +99,43 @@ def parse_whatsapp_file(
 
 
 def format_sigtop_timestamp(dt: datetime) -> str:
-    """Format a datetime as sigtop-style timestamp.
+    """
+    Format a datetime as sigtop-style timestamp.
 
-    Produces format like ``Tue, 13 Aug 2024 09:30:41 +0200``.
+    Produces format like 'Tue, 13 Aug 2024 09:30:41 +0200'.
 
-    :param dt: Datetime to format.
-    :returns: Formatted timestamp string with assumed +0200 timezone.
+    Parameters
+    ----------
+    dt : datetime
+        Datetime to format.
+
+    Returns
+    -------
+    str
+        Formatted timestamp string with assumed +0200 timezone.
     """
     # WhatsApp exports don't include timezone, assume local (+0200)
     return dt.strftime("%a, %d %b %Y %H:%M:%S +0200")
 
 
 def convert_to_sigtop(messages: list[Message], chat_name: str) -> str:
-    """Convert parsed messages to sigtop format.
+    """
+    Convert parsed messages to sigtop format.
 
     Produces a complete sigtop-format document with conversation header
     and individual message blocks.
 
-    :param messages: List of parsed messages.
-    :param chat_name: Name to use in the ``Conversation:`` header.
-    :returns: Complete sigtop-format text ready to write to file.
+    Parameters
+    ----------
+    messages : list of Message
+        List of parsed messages.
+    chat_name : str
+        Name to use in the 'Conversation:' header.
+
+    Returns
+    -------
+    str
+        Complete sigtop-format text ready to write to file.
     """
     lines: list[str] = []
 
@@ -131,18 +163,31 @@ def convert_to_sigtop(messages: list[Message], chat_name: str) -> str:
 
 
 def extract_chat_name(file_path: Path, name_pattern: str | None = None) -> str:
-    """Extract chat name from chat export filename using a pattern.
+    """
+    Extract chat name from chat export filename using a pattern.
 
-    Uses ``%s`` as placeholder for the chat name in the pattern. For example,
-    pattern ``"WhatsApp-chatt med %s"`` matches ``"WhatsApp-chatt med John.txt"``
-    and extracts ``"John"``.
+    Uses '%s' as placeholder for the chat name in the pattern. For example,
+    pattern "WhatsApp-chatt med %s" matches "WhatsApp-chatt med John.txt"
+    and extracts "John".
 
-    :param file_path: Path to the chat export file.
-    :param name_pattern: Pattern with ``%s`` placeholder for the name. If ``None``,
+    Parameters
+    ----------
+    file_path : Path
+        Path to the chat export file.
+    name_pattern : str, optional
+        Pattern with '%s' placeholder for the name. If None,
         returns the entire filename stem.
-    :returns: Extracted chat name.
-    :raises ValueError: If pattern is provided but doesn't match the filename,
-        or if pattern doesn't contain ``%s`` placeholder.
+
+    Returns
+    -------
+    str
+        Extracted chat name.
+
+    Raises
+    ------
+    ValueError
+        If pattern is provided but doesn't match the filename,
+        or if pattern doesn't contain '%s' placeholder.
     """
     stem = file_path.stem
 
@@ -175,12 +220,19 @@ def convert_file(
     your_name: str | None = None,
     name_pattern: str | None = None,
 ) -> None:
-    """Convert a single chat export file to sigtop format.
+    """
+    Convert a single chat export file to sigtop format.
 
-    :param input_path: Path to input chat export file.
-    :param output_path: Path where sigtop format output will be written.
-    :param your_name: Your display name in the chat for sender identification.
-    :param name_pattern: Pattern with ``%s`` for extracting chat name from filename.
+    Parameters
+    ----------
+    input_path : Path
+        Path to input chat export file.
+    output_path : Path
+        Path where sigtop format output will be written.
+    your_name : str, optional
+        Your display name in the chat for sender identification.
+    name_pattern : str, optional
+        Pattern with '%s' for extracting chat name from filename.
     """
     chat_name = extract_chat_name(input_path, name_pattern)
     messages = parse_whatsapp_file(input_path, your_name)
@@ -199,17 +251,28 @@ def process_input(
     your_name: str | None = None,
     name_pattern: str | None = None,
 ) -> None:
-    """Process input file or folder and write converted output.
+    """
+    Process input file or folder and write converted output.
 
     If input is a file, output must be a file. If input is a directory,
-    output must be a directory. All ``.txt`` files in input directory
+    output must be a directory. All '.txt' files in input directory
     are converted.
 
-    :param input_path: Path to input file or directory.
-    :param output_path: Path to output file or directory.
-    :param your_name: Your display name in the chat for sender identification.
-    :param name_pattern: Pattern with ``%s`` for extracting chat name from filename.
-    :raises ValueError: If input/output path types don't match (file vs directory).
+    Parameters
+    ----------
+    input_path : Path
+        Path to input file or directory.
+    output_path : Path
+        Path to output file or directory.
+    your_name : str, optional
+        Your display name in the chat for sender identification.
+    name_pattern : str, optional
+        Pattern with '%s' for extracting chat name from filename.
+
+    Raises
+    ------
+    ValueError
+        If input/output path types don't match (file vs directory).
     """
     if input_path.is_file():
         if output_path.is_dir():
@@ -245,9 +308,13 @@ def process_input(
 
 
 def main() -> int | None:
-    """Parse arguments and run the chat format conversion.
+    """
+    Parse arguments and run the chat format conversion.
 
-    :returns: Exit code ``1`` on error, ``None`` on success.
+    Returns
+    -------
+    int or None
+        Exit code 1 on error, None on success.
     """
     parser = argparse.ArgumentParser(
         description="Convert chat exports to sigtop format"

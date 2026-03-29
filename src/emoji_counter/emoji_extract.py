@@ -16,7 +16,19 @@ import pandas as pd
 
 
 def extract_emojis(text: str) -> List[str]:
-    """Extract all emojis from text using the emoji library."""
+    """
+    Extract all emojis from text using the emoji library.
+
+    Parameters
+    ----------
+    text : str
+        Input text to extract emojis from.
+
+    Returns
+    -------
+    list of str
+        List of emoji characters found in the text.
+    """
     return [c.chars for c in emoji.analyze(text, join_emoji=True)]
 
 
@@ -24,8 +36,16 @@ def parse_message_file(file_path: Path) -> List[Tuple[str, str, str, str]]:
     """
     Parse a message file and extract emoji data.
 
-    Returns:
-        List of tuples: (emoji, timestamp, username, chat_name)
+    Parameters
+    ----------
+    file_path : Path
+        Path to the message file to parse.
+
+    Returns
+    -------
+    list of tuple
+        List of tuples containing (emoji, timestamp, username, chat_name) for each
+        emoji found in the file.
     """
     chat_name = file_path.stem
     # Remove text in parentheses from chat name
@@ -81,11 +101,20 @@ def process_input(input_path: Path) -> pd.DataFrame:
     """
     Process a file or directory of files to extract emoji data.
 
-    Args:
-        input_path: Path to a file or directory
+    Parameters
+    ----------
+    input_path : Path
+        Path to a file or directory containing message files.
 
-    Returns:
-        DataFrame with columns: emoji, timestamp, username, chat_name
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns: emoji, timestamp, username, chat_name.
+
+    Raises
+    ------
+    ValueError
+        If input path does not exist.
     """
     all_data = []
 
@@ -102,13 +131,27 @@ def process_input(input_path: Path) -> pd.DataFrame:
 
 
 def export_to_sqlite(df: pd.DataFrame, output_path: Path) -> None:
-    """Export DataFrame to SQLite database."""
+    """
+    Export DataFrame to SQLite database.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing emoji data with columns: emoji, timestamp, username, chat_name.
+    output_path : Path
+        Path where the SQLite database file will be saved.
+    """
     conn = sqlite3.connect(output_path)
     df.to_sql("emojis", conn, if_exists="replace", index=False)
     conn.close()
 
 
 def main() -> None:
+    """
+    Parse command-line arguments and run the emoji extraction process.
+
+    Extracts emojis from message files and exports them to a SQLite database.
+    """
     parser = argparse.ArgumentParser(
         description="Extract emojis from chat message files and export to SQLite database"
     )

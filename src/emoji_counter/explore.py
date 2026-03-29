@@ -16,25 +16,39 @@ from dash.dependencies import Input, Output
 
 
 class EmojiExplorer:
-    """Interactive Dash dashboard for exploring emoji usage data from SQLite.
+    """
+    Interactive Dash dashboard for exploring emoji usage data from SQLite.
 
     Provides multiple visualization types (bar, pie, time series) with interactive
-    controls. Uses :mod:`dash` for the web interface and :mod:`pandas` for data
-    manipulation. All queries execute directly against SQLite to minimize memory usage.
+    controls. Uses Dash for the web interface and pandas for data manipulation. All
+    queries execute directly against SQLite to minimize memory usage.
 
     Supports multiple database files. When multiple files are provided, chat names
     are suffixed with the database file stem in parentheses to distinguish sources.
 
-    Must call :meth:`run` to start the web server after initialization.
+    Attributes
+    ----------
+    db_paths : list of Path
+        Paths to SQLite database files.
+    app : dash.Dash
+        The Dash application instance.
+
+    Notes
+    -----
+    Must call `run` to start the web server after initialization.
     """
 
     def __init__(self, db_paths: list[Path]) -> None:
-        """Initialize the explorer and configure the Dash application.
+        """
+        Initialize the explorer and configure the Dash application.
 
         Sets up the application layout and registers all interactive callbacks.
-        Does not start the web server; call :meth:`run` separately.
+        Does not start the web server; call `run` separately.
 
-        :param db_paths: List of paths to SQLite database files containing ``emojis`` table.
+        Parameters
+        ----------
+        db_paths : list of Path
+            List of paths to SQLite database files containing emojis table.
         """
         self.db_paths = db_paths
         self.app = dash.Dash(__name__)
@@ -42,14 +56,23 @@ class EmojiExplorer:
         self.setup_callbacks()
 
     def _query_all_databases(self, query: str, params: list[str] | None = None) -> pd.DataFrame:
-        """Execute a query against all databases and combine results.
+        """
+        Execute a query against all databases and combine results.
 
         When multiple databases are used, adds a suffix to chat_name column
         based on the database file stem.
 
-        :param query: SQL query to execute.
-        :param params: Optional query parameters.
-        :returns: Combined DataFrame from all databases.
+        Parameters
+        ----------
+        query : str
+            SQL query to execute.
+        params : list of str, optional
+            Query parameters for parameterized queries.
+
+        Returns
+        -------
+        pd.DataFrame
+            Combined DataFrame from all databases.
         """
         dfs: list[pd.DataFrame] = []
         use_suffix = len(self.db_paths) > 1
@@ -71,14 +94,22 @@ class EmojiExplorer:
         return pd.concat(dfs, ignore_index=True)
 
     def get_usernames(self, chat_name: str | None = None) -> list[str]:
-        """Query database(s) for unique usernames, optionally filtered by chat.
+        """
+        Query database(s) for unique usernames, optionally filtered by chat.
 
         Returns a list of all distinct usernames that appear in the database(s),
         sorted alphabetically. If chat_name is provided, only returns users who
         have messages in that chat.
 
-        :param chat_name: Optional chat name to filter by.
-        :returns: List of username strings.
+        Parameters
+        ----------
+        chat_name : str, optional
+            Chat name to filter by. If None, returns all usernames.
+
+        Returns
+        -------
+        list of str
+            List of username strings, sorted alphabetically.
         """
         if chat_name:
             usernames = self._get_usernames_for_chat(chat_name)
@@ -92,10 +123,18 @@ class EmojiExplorer:
         return sorted(usernames)
 
     def _get_usernames_for_chat(self, chat_name: str) -> list[str]:
-        """Get usernames that have messages in a specific chat.
+        """
+        Get usernames that have messages in a specific chat.
 
-        :param chat_name: Chat name to filter by (may include DB suffix).
-        :returns: List of username strings.
+        Parameters
+        ----------
+        chat_name : str
+            Chat name to filter by (may include database suffix).
+
+        Returns
+        -------
+        list of str
+            List of username strings.
         """
         use_suffix = len(self.db_paths) > 1
         usernames: set[str] = set()
@@ -120,15 +159,23 @@ class EmojiExplorer:
         return list(usernames)
 
     def get_chat_names(self, username: str | None = None) -> list[str]:
-        """Query database(s) for unique chat names, optionally filtered by user.
+        """
+        Query database(s) for unique chat names, optionally filtered by user.
 
         Returns a list of all distinct chat names that appear in the database(s),
         sorted alphabetically. When multiple databases are used, chat names include
         a suffix indicating the source database. If username is provided, only
         returns chats where that user has messages.
 
-        :param username: Optional username to filter by.
-        :returns: List of chat name strings.
+        Parameters
+        ----------
+        username : str, optional
+            Username to filter by. If None, returns all chat names.
+
+        Returns
+        -------
+        list of str
+            List of chat name strings, sorted alphabetically.
         """
         use_suffix = len(self.db_paths) > 1
         chat_names: list[str] = []
@@ -157,15 +204,24 @@ class EmojiExplorer:
     def get_emoji_counts(
         self, username: str | None = None, chat_name: str | None = None
     ) -> pd.DataFrame:
-        """Query database(s) for total occurrence count of each emoji.
+        """
+        Query database(s) for total occurrence count of each emoji.
 
         Aggregates all emoji occurrences across all messages and dates, returning
         emojis sorted by frequency (most common first). Optionally filters by username
         and/or chat name.
 
-        :param username: Optional username to filter by. If None, includes all users.
-        :param chat_name: Optional chat name to filter by. If None, includes all chats.
-        :returns: DataFrame with columns ``emoji`` and ``count``.
+        Parameters
+        ----------
+        username : str, optional
+            Username to filter by. If None, includes all users.
+        chat_name : str, optional
+            Chat name to filter by. If None, includes all chats.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with columns 'emoji' and 'count', sorted by count descending.
         """
         # For chat_name filter with multiple DBs, we need to handle the suffix
         use_suffix = len(self.db_paths) > 1
@@ -228,15 +284,24 @@ class EmojiExplorer:
     def get_emoji_time_series(
         self, username: str | None = None, chat_name: str | None = None
     ) -> pd.DataFrame:
-        """Query database(s) for individual emoji occurrences with timestamps.
+        """
+        Query database(s) for individual emoji occurrences with timestamps.
 
         Returns raw emoji data without aggregation. Each row represents one
         emoji occurrence with its full timestamp. Optionally filters by username
         and/or chat name.
 
-        :param username: Optional username to filter by. If None, includes all users.
-        :param chat_name: Optional chat name to filter by. If None, includes all chats.
-        :returns: DataFrame with columns ``timestamp`` and ``emoji``.
+        Parameters
+        ----------
+        username : str, optional
+            Username to filter by. If None, includes all users.
+        chat_name : str, optional
+            Chat name to filter by. If None, includes all chats.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with columns 'timestamp' and 'emoji', sorted by timestamp.
         """
         use_suffix = len(self.db_paths) > 1
 
@@ -288,13 +353,21 @@ class EmojiExplorer:
         return combined.sort_values("timestamp")
 
     def add_toggle_buttons(self, fig: go.Figure) -> go.Figure:
-        """Add Show All / Hide All toggle buttons to a Plotly figure.
+        """
+        Add Show All / Hide All toggle buttons to a Plotly figure.
 
         Adds an updatemenus configuration with two buttons that control the
         visibility of all traces in the figure.
 
-        :param fig: Plotly figure to add buttons to.
-        :returns: The same figure with toggle buttons added.
+        Parameters
+        ----------
+        fig : go.Figure
+            Plotly figure to add buttons to.
+
+        Returns
+        -------
+        go.Figure
+            The same figure with toggle buttons added.
         """
         fig.update_layout(
             updatemenus=[
@@ -322,10 +395,11 @@ class EmojiExplorer:
         return fig
 
     def setup_layout(self) -> None:
-        """Configure the Dash application layout with controls and plot area.
+        """
+        Configure the Dash application layout with controls and plot area.
 
         Creates dropdowns for chart type, user, and chat selection, and a graph
-        container for plots. The layout is assigned to :attr:`self.app.layout`.
+        container for plots. The layout is assigned to self.app.layout.
         Dropdown options are populated dynamically via callbacks.
         """
         self.app.layout = html.Div(
@@ -384,10 +458,18 @@ class EmojiExplorer:
         )
 
     def _build_user_options(self, chat_name: str | None = None) -> list[dict[str, str]]:
-        """Build user dropdown options, optionally filtered by chat.
+        """
+        Build user dropdown options, optionally filtered by chat.
 
-        :param chat_name: Optional chat name to filter users by.
-        :returns: List of dropdown option dicts with label and value.
+        Parameters
+        ----------
+        chat_name : str, optional
+            Chat name to filter users by.
+
+        Returns
+        -------
+        list of dict
+            List of dropdown option dicts with 'label' and 'value' keys.
         """
         usernames = self.get_usernames(chat_name)
         # If "You" is in the list, move it to the top
@@ -400,10 +482,18 @@ class EmojiExplorer:
         ]
 
     def _build_chat_options(self, username: str | None = None) -> list[dict[str, str]]:
-        """Build chat dropdown options, optionally filtered by user.
+        """
+        Build chat dropdown options, optionally filtered by user.
 
-        :param username: Optional username to filter chats by.
-        :returns: List of dropdown option dicts with label and value.
+        Parameters
+        ----------
+        username : str, optional
+            Username to filter chats by.
+
+        Returns
+        -------
+        list of dict
+            List of dropdown option dicts with 'label' and 'value' keys.
         """
         chat_names = self.get_chat_names(username)
 
@@ -412,14 +502,15 @@ class EmojiExplorer:
         ]
 
     def setup_callbacks(self) -> None:
-        """Register interactive callbacks for chart and filter updates.
+        """
+        Register interactive callbacks for chart and filter updates.
 
         Creates callbacks to:
         1. Update user dropdown options based on selected chat
         2. Update chat dropdown options based on selected user
         3. Regenerate the plot when any filter changes
 
-        The callbacks are registered with the :attr:`self.app` instance.
+        The callbacks are registered with the self.app instance.
         """
 
         @self.app.callback(
@@ -427,7 +518,19 @@ class EmojiExplorer:
             Input("chat-filter", "value"),
         )
         def update_user_options(selected_chat: str) -> list[dict[str, str]]:
-            """Update user dropdown options based on selected chat."""
+            """
+            Update user dropdown options based on selected chat.
+
+            Parameters
+            ----------
+            selected_chat : str
+                Selected chat value from dropdown, or "all" for all chats.
+
+            Returns
+            -------
+            list of dict
+                User dropdown options filtered by chat.
+            """
             chat_name = None if selected_chat == "all" else selected_chat
             return self._build_user_options(chat_name)
 
@@ -436,7 +539,19 @@ class EmojiExplorer:
             Input("user-filter", "value"),
         )
         def update_chat_options(selected_user: str) -> list[dict[str, str]]:
-            """Update chat dropdown options based on selected user."""
+            """
+            Update chat dropdown options based on selected user.
+
+            Parameters
+            ----------
+            selected_user : str
+                Selected user value from dropdown, or "everyone" for all users.
+
+            Returns
+            -------
+            list of dict
+                Chat dropdown options filtered by user.
+            """
             username = None if selected_user == "everyone" else selected_user
             return self._build_chat_options(username)
 
@@ -449,17 +564,27 @@ class EmojiExplorer:
         def update_plot(
             chart_type: str, selected_user: str, selected_chat: str
         ) -> go.Figure:
-            """Generate a Plotly figure based on selected chart type and filters.
+            """
+            Generate a Plotly figure based on selected chart type and filters.
 
-            Queries the database via :meth:`get_emoji_counts` or
-            :meth:`get_emoji_time_series` depending on chart type, filtering by
-            user and/or chat if specified. For time series, always shows cumulative counts.
-            Returns a figure with appropriate traces, labels, and hover templates.
+            Queries the database via get_emoji_counts or get_emoji_time_series
+            depending on chart type, filtering by user and/or chat if specified.
+            For time series, always shows cumulative counts. Returns a figure
+            with appropriate traces, labels, and hover templates.
 
-            :param chart_type: Chart type (``"bar"``, ``"pie"``, or ``"timeseries"``).
-            :param selected_user: Username to filter by, or ``"everyone"`` for all users.
-            :param selected_chat: Chat name to filter by, or ``"all"`` for all chats.
-            :returns: Plotly :class:`go.Figure` ready for rendering.
+            Parameters
+            ----------
+            chart_type : str
+                Chart type: "bar", "pie", or "timeseries".
+            selected_user : str
+                Username to filter by, or "everyone" for all users.
+            selected_chat : str
+                Chat name to filter by, or "all" for all chats.
+
+            Returns
+            -------
+            go.Figure
+                Plotly figure ready for rendering.
             """
             # Convert dropdown values to None for query methods
             username = None if selected_user == "everyone" else selected_user
@@ -578,13 +703,18 @@ class EmojiExplorer:
             return self.add_toggle_buttons(fig)
 
     def run(self, debug: bool = True, port: int = 8050) -> None:
-        """Start the Dash web server and block until interrupted.
+        """
+        Start the Dash web server and block until interrupted.
 
         Prints the database path(s) and server URL to stdout, then starts the
-        Flask development server. Blocks indefinitely until interrupted (Ctrl+C).
+        Flask development server. Blocks indefinitely until interrupted with Ctrl+C.
 
-        :param debug: Enable debug mode with auto-reload and detailed errors.
-        :param port: TCP port to bind the server to.
+        Parameters
+        ----------
+        debug : bool, default=True
+            Enable debug mode with auto-reload and detailed errors.
+        port : int, default=8050
+            TCP port to bind the server to.
         """
         for db_path in self.db_paths:
             print(f"Loading data from: {db_path}")
@@ -593,14 +723,18 @@ class EmojiExplorer:
 
 
 def main() -> int | None:
-    """Parse arguments, validate database paths, and launch the dashboard.
+    """
+    Parse arguments, validate database paths, and launch the dashboard.
 
     Parses command-line arguments for database path(s) and server options. Validates
-    that all database files exist before initializing :class:`EmojiExplorer`.
-    Returns exit code ``1`` if any database is not found, otherwise blocks until
+    that all database files exist before initializing EmojiExplorer.
+    Returns exit code 1 if any database is not found, otherwise blocks until
     the server is interrupted.
 
-    :returns: Exit code ``1`` on error, or does not return if server starts successfully.
+    Returns
+    -------
+    int or None
+        Exit code 1 on error, or does not return if server starts successfully.
     """
     parser = argparse.ArgumentParser(
         description="Interactive dashboard for exploring emoji data"
