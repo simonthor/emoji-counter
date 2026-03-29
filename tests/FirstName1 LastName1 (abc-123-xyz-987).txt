@@ -1,0 +1,21 @@
+Conversation: FirstName1 LastName1 (abc-123-xyz-987)
+
+From: FirstName1 LastName1 (abc-123-xyz-987)
+Type: incoming
+Sent: Tue, 13 Aug 2024 09:30:41 +0200
+Received: Tue, 13 Aug 2024 14:45:13 +0200
+
+Lorem ipsum... 😄
+
+From: FirstName1 LastName1 (abc-123-xyz-987)
+Type: incoming
+Sent: Tue, 13 Aug 2024 09:31:00 +0200
+Received: Tue, 13 Aug 2024 14:45:13 +0200
+
+dolor sit amet... 😂
+
+From: You
+Type: outgoing
+Sent: Fri, 4 Oct 2024 17:53:47 +0200
+
+consectetur adipiscing elit... 🤔
