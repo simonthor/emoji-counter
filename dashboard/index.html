@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="Simon Thor" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Dashboard Usage - 🎭 Emoji Counter 📊</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Dashboard Usage";
+        var mkdocs_page_input_path = "dashboard.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> 🎭 Emoji Counter 📊
+        </a>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting Started</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../message-conversion/">Message Conversion</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../emoji-extraction/">Emoji Extraction</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Dashboard Usage</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#launching-the-dashboard">Launching the Dashboard</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#single-database">Single Database</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#multiple-databases">Multiple Databases</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#options">Options</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#accessing-the-dashboard">Accessing the Dashboard</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#chart-types">Chart Types</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#bar-chart">Bar Chart</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#pie-chart">Pie Chart</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#time-series">Time Series</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#filters">Filters</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#user-filter">User Filter</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#chat-filter">Chat Filter</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#dynamic-filtering">Dynamic Filtering</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#interactive-controls">Interactive Controls</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#show-all-hide-all-buttons">Show All / Hide All Buttons</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#legend-interactions">Legend Interactions</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#hover-information">Hover Information</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#tips-and-tricks">Tips and Tricks</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#comparing-platforms">Comparing Platforms</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#finding-active-periods">Finding Active Periods</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#user-analysis">User Analysis</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#chat-comparison">Chat Comparison</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../database-schema/">Database Schema</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../autoapi/emoji_counter/">emoji_counter</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../autoapi/emoji_counter/emoji_extract/">emoji_extract</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../autoapi/emoji_counter/explore/">explore</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../autoapi/emoji_counter/message_convert/">message_convert</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">🎭 Emoji Counter 📊</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Dashboard Usage</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/simonthor/emoji-counter/edit/master/docs/dashboard.md">Edit on simonthor/emoji-counter</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="dashboard-usage">Dashboard Usage<a class="headerlink" href="#dashboard-usage" title="Permanent link">&para;</a></h1>
+<p>The interactive dashboard lets you explore emoji usage patterns through visualizations and filters.</p>
+<h2 id="launching-the-dashboard">Launching the Dashboard<a class="headerlink" href="#launching-the-dashboard" title="Permanent link">&para;</a></h2>
+<h3 id="single-database">Single Database<a class="headerlink" href="#single-database" title="Permanent link">&para;</a></h3>
+<p>View data from one source:</p>
+<div class="codehilite"><pre><span></span><code>emoji-explore<span class="w"> </span>data/emojis.sql
+</code></pre></div>
+
+<h3 id="multiple-databases">Multiple Databases<a class="headerlink" href="#multiple-databases" title="Permanent link">&para;</a></h3>
+<p>Combine and compare data from multiple sources:</p>
+<div class="codehilite"><pre><span></span><code>emoji-explore<span class="w"> </span>data/signal.sql<span class="w"> </span>data/whatsapp.sql
+</code></pre></div>
+
+<p>When multiple databases are provided, chat names are automatically suffixed with the database filename to distinguish sources:</p>
+<ul>
+<li><code>John Doe (signal)</code></li>
+<li><code>Alice (whatsapp)</code></li>
+</ul>
+<h3 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>db_paths</code></td>
+<td>(required)</td>
+<td>One or more paths to SQLite databases</td>
+</tr>
+<tr>
+<td><code>--port</code></td>
+<td><code>8050</code></td>
+<td>Port to run the server on</td>
+</tr>
+<tr>
+<td><code>--no-debug</code></td>
+<td>(disabled)</td>
+<td>Disable debug mode and auto-reload</td>
+</tr>
+</tbody>
+</table>
+<h3 id="accessing-the-dashboard">Accessing the Dashboard<a class="headerlink" href="#accessing-the-dashboard" title="Permanent link">&para;</a></h3>
+<p>After launching, open your browser to:</p>
+<div class="codehilite"><pre><span></span><code>http://127.0.0.1:8050
+</code></pre></div>
+
+<p>Or use the custom port:</p>
+<div class="codehilite"><pre><span></span><code>emoji-explore<span class="w"> </span>data/emojis.sql<span class="w"> </span>--port<span class="w"> </span><span class="m">3000</span>
+<span class="c1"># Open http://127.0.0.1:3000</span>
+</code></pre></div>
+
+<h2 id="chart-types">Chart Types<a class="headerlink" href="#chart-types" title="Permanent link">&para;</a></h2>
+<h3 id="bar-chart">Bar Chart<a class="headerlink" href="#bar-chart" title="Permanent link">&para;</a></h3>
+<p>Shows the total count for each emoji.</p>
+<ul>
+<li>Each bar represents one emoji</li>
+<li>Height indicates frequency</li>
+<li>Colors distinguish different emojis</li>
+<li>Hover to see exact counts</li>
+</ul>
+<p><strong>Best for:</strong> Comparing popularity of different emojis</p>
+<h3 id="pie-chart">Pie Chart<a class="headerlink" href="#pie-chart" title="Permanent link">&para;</a></h3>
+<p>Shows the proportional distribution of emoji usage.</p>
+<ul>
+<li>Each slice represents one emoji</li>
+<li>Size shows relative frequency</li>
+<li>Labels show emoji, count, and percentage</li>
+<li>Hover for detailed information</li>
+</ul>
+<p><strong>Best for:</strong> Understanding emoji distribution and proportions</p>
+<h3 id="time-series">Time Series<a class="headerlink" href="#time-series" title="Permanent link">&para;</a></h3>
+<p>Shows cumulative emoji usage over time.</p>
+<ul>
+<li>X-axis: Time (message timestamps)</li>
+<li>Y-axis: Cumulative count</li>
+<li>One line per emoji</li>
+<li>Bold black line shows total across all emojis</li>
+<li>Legend sorted by final cumulative count</li>
+</ul>
+<p><strong>Best for:</strong> Tracking emoji usage growth and trends</p>
+<h2 id="filters">Filters<a class="headerlink" href="#filters" title="Permanent link">&para;</a></h2>
+<h3 id="user-filter">User Filter<a class="headerlink" href="#user-filter" title="Permanent link">&para;</a></h3>
+<p>Select a specific user or view everyone's emojis.</p>
+<ul>
+<li>Default: "Everyone"</li>
+<li>Updates chart to show only that user's emojis</li>
+<li>When changed, chat filter updates to show only chats where that user has messages</li>
+</ul>
+<p><strong>Tip:</strong> If "You" is in the list, it appears at the top for quick access.</p>
+<h3 id="chat-filter">Chat Filter<a class="headerlink" href="#chat-filter" title="Permanent link">&para;</a></h3>
+<p>Select a specific chat or view all chats.</p>
+<ul>
+<li>Default: "All Chats"</li>
+<li>Updates chart to show only emojis from that chat</li>
+<li>When changed, user filter updates to show only users in that chat</li>
+</ul>
+<h3 id="dynamic-filtering">Dynamic Filtering<a class="headerlink" href="#dynamic-filtering" title="Permanent link">&para;</a></h3>
+<p>Filters update dynamically based on each other:</p>
+<ol>
+<li>Select a user → Chat dropdown shows only chats where that user participated</li>
+<li>Select a chat → User dropdown shows only users in that chat</li>
+<li>Select "Everyone" or "All Chats" to reset</li>
+</ol>
+<p>This makes it easy to drill down into specific conversations or users.</p>
+<h2 id="interactive-controls">Interactive Controls<a class="headerlink" href="#interactive-controls" title="Permanent link">&para;</a></h2>
+<h3 id="show-all-hide-all-buttons">Show All / Hide All Buttons<a class="headerlink" href="#show-all-hide-all-buttons" title="Permanent link">&para;</a></h3>
+<p>Toggle visibility of all emojis at once:</p>
+<ul>
+<li><strong>Show All</strong>: Make all emoji traces visible</li>
+<li><strong>Hide All</strong>: Hide all emoji traces (legendonly mode)</li>
+</ul>
+<p>Available on bar charts and time series. </p>
+<p><strong>Note:</strong> Due to a Plotly limitation, these buttons don't work correctly for pie charts.</p>
+<h3 id="legend-interactions">Legend Interactions<a class="headerlink" href="#legend-interactions" title="Permanent link">&para;</a></h3>
+<p>Click on legend entries to:</p>
+<ul>
+<li><strong>Single click</strong>: Toggle that emoji's visibility</li>
+<li>Works on all chart types</li>
+<li>Hidden emojis are grayed out in the legend</li>
+</ul>
+<h3 id="hover-information">Hover Information<a class="headerlink" href="#hover-information" title="Permanent link">&para;</a></h3>
+<p>Hover over any data point to see:</p>
+<ul>
+<li><strong>Bar/Pie</strong>: Emoji, count, and percentage</li>
+<li><strong>Time series</strong>: Date, emoji, and cumulative count</li>
+</ul>
+<h2 id="tips-and-tricks">Tips and Tricks<a class="headerlink" href="#tips-and-tricks" title="Permanent link">&para;</a></h2>
+<h3 id="comparing-platforms">Comparing Platforms<a class="headerlink" href="#comparing-platforms" title="Permanent link">&para;</a></h3>
+<p>Use multiple databases to compare Signal vs WhatsApp usage:</p>
+<div class="codehilite"><pre><span></span><code>emoji-explore<span class="w"> </span>data/signal.sql<span class="w"> </span>data/whatsapp.sql
+</code></pre></div>
+
+<p>Chat names will be suffixed (e.g., "Alice (signal)", "Alice (whatsapp)") to distinguish between platforms.</p>
+<h3 id="finding-active-periods">Finding Active Periods<a class="headerlink" href="#finding-active-periods" title="Permanent link">&para;</a></h3>
+<p>Use the time series chart to identify:</p>
+<ul>
+<li>Periods of high emoji usage</li>
+<li>When specific emojis became popular</li>
+<li>Overall message activity trends</li>
+</ul>
+<h3 id="user-analysis">User Analysis<a class="headerlink" href="#user-analysis" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Select "Time Series" chart type</li>
+<li>Choose a specific user from the user filter</li>
+<li>See that user's emoji usage evolution</li>
+</ol>
+<h3 id="chat-comparison">Chat Comparison<a class="headerlink" href="#chat-comparison" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Select "Bar Chart" or "Pie Chart"</li>
+<li>Choose "Everyone" for users</li>
+<li>Switch between different chats to compare emoji preferences</li>
+</ol>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../emoji-extraction/" class="btn btn-neutral float-left" title="Emoji Extraction"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../database-schema/" class="btn btn-neutral float-right" title="Database Schema">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/simonthor/emoji-counter" class="fa fa-code-fork" style="color: #fcfcfc"> simonthor/emoji-counter</a>
+        </span>
+    
+    
+      <span><a href="../emoji-extraction/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../database-schema/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

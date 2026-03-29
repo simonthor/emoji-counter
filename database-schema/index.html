@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="Simon Thor" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Database Schema - 🎭 Emoji Counter 📊</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Database Schema";
+        var mkdocs_page_input_path = "database-schema.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> 🎭 Emoji Counter 📊
+        </a>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting Started</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../message-conversion/">Message Conversion</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../emoji-extraction/">Emoji Extraction</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../dashboard/">Dashboard Usage</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Database Schema</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#table-emojis">Table: emojis</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#indexes">Indexes</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#data-types">Data Types</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#emoji-text">emoji (TEXT)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#timestamp-text">timestamp (TEXT)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#username-text">username (TEXT)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#chat_name-text">chat_name (TEXT)</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#example-queries">Example Queries</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#count-total-emojis">Count Total Emojis</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#most-popular-emojis">Most Popular Emojis</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#emojis-by-user">Emojis by User</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#emojis-over-time">Emojis Over Time</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#user-activity-in-specific-chat">User Activity in Specific Chat</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#storage">Storage</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#database-file">Database File</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#combining-databases">Combining Databases</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../autoapi/emoji_counter/">emoji_counter</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../autoapi/emoji_counter/emoji_extract/">emoji_extract</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../autoapi/emoji_counter/explore/">explore</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../autoapi/emoji_counter/message_convert/">message_convert</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">🎭 Emoji Counter 📊</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Database Schema</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/simonthor/emoji-counter/edit/master/docs/database-schema.md">Edit on simonthor/emoji-counter</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="database-schema">Database Schema<a class="headerlink" href="#database-schema" title="Permanent link">&para;</a></h1>
+<p>The SQLite database contains a single table that stores all extracted emoji data.</p>
+<h2 id="table-emojis">Table: <code>emojis</code><a class="headerlink" href="#table-emojis" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>emoji</code></td>
+<td>TEXT</td>
+<td>The emoji character (e.g., 😄, 👍, ❤️)</td>
+</tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>TEXT</td>
+<td>ISO 8601 timestamp when the message was sent</td>
+</tr>
+<tr>
+<td><code>username</code></td>
+<td>TEXT</td>
+<td>Name of the user who sent the emoji</td>
+</tr>
+<tr>
+<td><code>chat_name</code></td>
+<td>TEXT</td>
+<td>Name of the chat/conversation</td>
+</tr>
+</tbody>
+</table>
+<h3 id="indexes">Indexes<a class="headerlink" href="#indexes" title="Permanent link">&para;</a></h3>
+<p>No indexes are created by default. For large datasets (&gt;1 million rows), consider adding indexes:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_timestamp</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">emojis</span><span class="p">(</span><span class="k">timestamp</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_username</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">emojis</span><span class="p">(</span><span class="n">username</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_chat_name</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">emojis</span><span class="p">(</span><span class="n">chat_name</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_emoji</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">emojis</span><span class="p">(</span><span class="n">emoji</span><span class="p">);</span>
+</code></pre></div>
+
+<h2 id="data-types">Data Types<a class="headerlink" href="#data-types" title="Permanent link">&para;</a></h2>
+<h3 id="emoji-text">emoji (TEXT)<a class="headerlink" href="#emoji-text" title="Permanent link">&para;</a></h3>
+<p>Stores the actual emoji character as UTF-8 text.</p>
+<p>Examples:
+- <code>😄</code>
+- <code>👍</code>
+- <code>❤️</code>
+- <code>🎉</code></p>
+<h3 id="timestamp-text">timestamp (TEXT)<a class="headerlink" href="#timestamp-text" title="Permanent link">&para;</a></h3>
+<p>ISO 8601 format with timezone offset.</p>
+<p>Format: <code>YYYY-MM-DDTHH:MM:SS+ZZ:ZZ</code></p>
+<p>Examples:
+- <code>2024-08-13T09:30:41+02:00</code>
+- <code>2025-06-05T19:42:00+02:00</code></p>
+<h3 id="username-text">username (TEXT)<a class="headerlink" href="#username-text" title="Permanent link">&para;</a></h3>
+<p>The sender's display name as it appears in the message file.</p>
+<p>Examples:
+- <code>John Doe</code>
+- <code>Alice Smith</code>
+- <code>You</code> (for outgoing messages)</p>
+<p><strong>Note:</strong> When converting WhatsApp messages with <code>--your-name</code>, that name is replaced with "You".</p>
+<h3 id="chat_name-text">chat_name (TEXT)<a class="headerlink" href="#chat_name-text" title="Permanent link">&para;</a></h3>
+<p>The conversation name derived from the filename.</p>
+<p>Examples:
+- <code>John Doe</code> (from <code>John Doe (abc-123).txt</code>)
+- <code>Family Group</code> (from <code>Family Group (xyz-789).txt</code>)
+- <code>Alice</code> (from <code>Alice (Whatsapp).txt</code>)</p>
+<p>Text in parentheses is automatically removed during extraction.</p>
+<h2 id="example-queries">Example Queries<a class="headerlink" href="#example-queries" title="Permanent link">&para;</a></h2>
+<h3 id="count-total-emojis">Count Total Emojis<a class="headerlink" href="#count-total-emojis" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">total_emojis</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">emojis</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="most-popular-emojis">Most Popular Emojis<a class="headerlink" href="#most-popular-emojis" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">emoji</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="k">count</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">emojis</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">emoji</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">count</span><span class="w"> </span><span class="k">DESC</span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="emojis-by-user">Emojis by User<a class="headerlink" href="#emojis-by-user" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">username</span><span class="p">,</span><span class="w"> </span><span class="n">emoji</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="k">count</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">emojis</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">username</span><span class="p">,</span><span class="w"> </span><span class="n">emoji</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">username</span><span class="p">,</span><span class="w"> </span><span class="k">count</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="emojis-over-time">Emojis Over Time<a class="headerlink" href="#emojis-over-time" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="nb">DATE</span><span class="p">(</span><span class="k">timestamp</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nb">date</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="k">count</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">emojis</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="nb">date</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="nb">date</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="user-activity-in-specific-chat">User Activity in Specific Chat<a class="headerlink" href="#user-activity-in-specific-chat" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">username</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">emoji_count</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">emojis</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">chat_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;John Doe&#39;</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">username</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">emoji_count</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<h2 id="storage">Storage<a class="headerlink" href="#storage" title="Permanent link">&para;</a></h2>
+<p>The database uses SQLite's default page size (4096 bytes). </p>
+<p>Typical storage:
+- <strong>~100 bytes</strong> per row (varies with text length)
+- <strong>~10 MB</strong> per 100,000 emoji instances</p>
+<h2 id="database-file">Database File<a class="headerlink" href="#database-file" title="Permanent link">&para;</a></h2>
+<p>The SQLite database is a single <code>.sql</code> file that can be:</p>
+<ul>
+<li>Copied and shared</li>
+<li>Backed up easily</li>
+<li>Queried with any SQLite client</li>
+<li>Combined with other databases using <code>ATTACH DATABASE</code></li>
+</ul>
+<h2 id="combining-databases">Combining Databases<a class="headerlink" href="#combining-databases" title="Permanent link">&para;</a></h2>
+<p>The dashboard automatically combines multiple databases when provided:</p>
+<div class="codehilite"><pre><span></span><code>emoji-explore<span class="w"> </span>data/signal.sql<span class="w"> </span>data/whatsapp.sql
+</code></pre></div>
+
+<p>This queries both databases separately and merges results in memory, suffixing chat names with the database name.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../dashboard/" class="btn btn-neutral float-left" title="Dashboard Usage"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../autoapi/emoji_counter/" class="btn btn-neutral float-right" title="emoji_counter">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/simonthor/emoji-counter" class="fa fa-code-fork" style="color: #fcfcfc"> simonthor/emoji-counter</a>
+        </span>
+    
+    
+      <span><a href="../dashboard/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../autoapi/emoji_counter/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
