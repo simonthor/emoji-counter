@@ -1,6 +1,7 @@
 # 🎭 Emoji Counter 📊
 
 Extract and visualize emoji usage from chat messages.
+![Dashboard Screenshot](./banner.png)
 
 ## Features
 
@@ -36,7 +37,7 @@ pip install .
 
 ### 1. Prepare Message Files
 
-The format that the current program supports is the output format from [sigtop](https://github.com/tbvdm/sigtop/), which is a tool to extract messages from Signal desktop. To install and run `sigtop`, follow the instructions in their repository.
+The format that the current program supports is the output format from [sigtop](https://github.com/tbvdm/sigtop/), which is a tool to extract messages from Signal desktop. To install and run `sigtop`, follow the instructions in their repository. Other output formats are planned to be supported in the future.
 
 `sigtop` will create a directory with text files containing the messages from each chat. This will be of the format
 ```
