@@ -1,0 +1,68 @@
+[project]
+site_name = "🎭 Emoji Counter 📊"
+site_description = "Extract and visualize emoji usage from chat messages"
+site_author = "Simon Thor"
+site_url = "https://simonthor.github.io/emoji-counter"
+repo_url = "https://github.com/simonthor/emoji-counter"
+repo_name = "simonthor/emoji-counter"
+docs_dir = "docs"
+site_dir = "site"
+
+nav = [
+  { "Home" = "index.md" },
+  { "Getting Started" = "getting-started.md" },
+  { "Message Conversion" = "message-conversion.md" },
+  { "Emoji Extraction" = "emoji-extraction.md" },
+  { "Dashboard Usage" = "dashboard.md" },
+  { "Database Schema" = "database-schema.md" },
+]
+
+[project.theme]
+variant = "modern"
+features = [
+  "navigation.instant",
+  "navigation.instant.prefetch",
+  "navigation.top",
+  "navigation.footer",
+  "navigation.tracking",
+  "toc.follow",
+  "search.highlight",
+  "content.action.edit",
+  "content.action.view",
+]
+
+[project.theme.palette]
+scheme = "slate"
+primary = "indigo"
+accent = "indigo"
+
+[project.markdown_extensions.toc]
+permalink = true
+
+[project.markdown_extensions.admonition]
+[project.markdown_extensions.pymdownx.highlight]
+[project.markdown_extensions.pymdownx.superfences]
+[project.markdown_extensions.tables]
+
+[project.plugins.mkdocstrings.handlers.python]
+paths = ["src"]
+inventories = ["https://docs.python.org/3/objects.inv"]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+docstring_style = "numpy"
+docstring_section_style = "list"
+ignore_init_summary = true
+signature_crossrefs = true
+unwrap_annotated = true
+inherited_members = true
+summary = true
+heading_level = 1
+parameter_headings = true
+type_parameter_headings = true
+show_symbol_type_toc = true
+line_length = 88
+merge_init_into_class = true
+separate_signature = true
+show_signature_annotations = true
+show_signature_type_parameters = true
+show_bases = false

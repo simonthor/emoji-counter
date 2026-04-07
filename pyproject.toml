@@ -14,9 +14,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-  "mkdocs>=1.6.1",
-  "mkdocs-autoapi>=0.4.1",
-  "mkdocstrings>=1.0.3",
+  "zensical",
   "mkdocstrings-python>=2.0.3",
   "pytest",
   "ruff",
