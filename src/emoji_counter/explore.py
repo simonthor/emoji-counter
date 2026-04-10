@@ -454,6 +454,15 @@ class EmojiExplorer:
                 html.Div(
                     [dcc.Graph(id="emoji-frequency-plot")], style={"padding": "20px"}
                 ),
+                html.Div(
+                    "Shortcut: Press Alt+S to save the current chart view.",
+                    style={
+                        "textAlign": "center",
+                        "color": "#666",
+                        "fontSize": "0.9rem",
+                        "paddingBottom": "20px",
+                    },
+                ),
             ]
         )
 

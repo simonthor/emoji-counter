@@ -19,3 +19,6 @@ uv run ty check
 uv run ruff format
 ```
 If either of these commands reports errors, fix them and run the command again until there are no errors.
+
+# Bash commands
+Never use `rm -rf` in your bash commands. Instead, use `rm -r` to avoid accidentally deleting important files. Always double-check the command before executing it to ensure that you are not deleting anything important.
