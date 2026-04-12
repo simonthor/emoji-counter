@@ -9,6 +9,7 @@ Sigtop output format: Multi-line blocks with From:, Type:, Sent: headers.
 """
 
 import argparse
+import json
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -96,6 +97,164 @@ def parse_whatsapp_file(
         messages.append(current_msg)
 
     return messages
+
+
+def parse_messenger_file(
+    file_path: Path, your_name: str | None = None
+) -> tuple[str, str, list[Message]]:
+    """
+    Parse a Messenger JSON export file into chat metadata and messages.
+
+    Parameters
+    ----------
+    file_path : Path
+        Path to the Messenger message_1.json file.
+    your_name : str, optional
+        Your display name in Messenger. If provided, messages from this sender
+        will be marked as "You" in the output.
+
+    Returns
+    -------
+    tuple[str, str, list[Message]]
+        (chat title, chat id, parsed messages)
+    """
+    with open(file_path, encoding="utf-8") as f:
+        data = json.load(f)
+
+    chat_title = _repair_messenger_text(data["title"])
+    thread_name = file_path.parent.name
+    chat_id = thread_name.rsplit("_", 1)[1] if "_" in thread_name else thread_name
+
+    messages: list[Message] = []
+    for raw_msg in data.get("messages", []):
+        timestamp_ms = raw_msg.get("timestamp_ms")
+        sender = raw_msg.get("sender_name")
+        if timestamp_ms is None or sender is None:
+            continue
+        sender = _repair_messenger_text(sender)
+
+        if your_name and sender == your_name:
+            sender = "You"
+
+        content = raw_msg.get("content")
+        if content is None:
+            content = ""
+        else:
+            content = _repair_messenger_text(content)
+
+        messages.append(
+            Message(
+                timestamp=datetime.fromtimestamp(timestamp_ms / 1000),
+                sender=sender,
+                content=content,
+            )
+        )
+
+    messages.sort(key=lambda msg: msg.timestamp)
+    return chat_title, chat_id, messages
+
+
+def _repair_messenger_text(text: str) -> str:
+    """
+    Repair common UTF-8/Latin-1 mojibake found in some Messenger exports.
+
+    Example: "FÃ¶r" -> "För".
+    """
+    mojibake_markers = ("Ã", "Â", "ð", "â", "€", "™")
+    if not any(marker in text for marker in mojibake_markers):
+        return text
+
+    try:
+        repaired = text.encode("latin-1").decode("utf-8")
+    except UnicodeError:
+        return text
+
+    return repaired
+
+
+def _safe_filename(value: str) -> str:
+    """Normalize a user-facing name for use as a file name."""
+    cleaned = re.sub(r'[<>:"/\\|?*]', "_", value).strip()
+    return cleaned or "unnamed_chat"
+
+
+def process_messenger_input(
+    input_path: Path,
+    output_path: Path,
+    your_name: str | None = None,
+) -> None:
+    """
+    Process Messenger JSON exports from e2ee_cutover and inbox directories.
+    """
+    if input_path.is_file():
+        raise ValueError("Messenger input must be a directory")
+    if not input_path.exists():
+        raise ValueError(f"Input path does not exist: {input_path}")
+    if output_path.exists() and output_path.is_file():
+        raise ValueError("Messenger output must be a directory")
+
+    messages_root = input_path / "your_facebook_activity" / "messages"
+    if not messages_root.is_dir():
+        raise ValueError(
+            "Messenger input must contain your_facebook_activity/messages"
+        )
+
+    cutover_dir = messages_root / "e2ee_cutover"
+    inbox_dir = messages_root / "inbox"
+    if not cutover_dir.is_dir() or not inbox_dir.is_dir():
+        raise ValueError("Could not find Messenger e2ee_cutover and inbox folders")
+
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    thread_files: dict[str, list[Path]] = {}
+    for source_dir in (cutover_dir, inbox_dir):
+        for message_file in source_dir.glob("*/message_1.json"):
+            thread_key = message_file.parent.name
+            thread_files.setdefault(thread_key, []).append(message_file)
+
+    if not thread_files:
+        print("No Messenger message_1.json files found")
+        return
+
+    converted_count = 0
+    for thread_key in sorted(thread_files):
+        chat_name: str | None = None
+        chat_id: str | None = None
+        merged_messages: list[Message] = []
+        seen_entries: set[tuple[int, str, str]] = set()
+
+        for message_file in thread_files[thread_key]:
+            file_chat_name, file_chat_id, messages = parse_messenger_file(
+                message_file, your_name
+            )
+            if chat_name is None:
+                chat_name = file_chat_name
+            if chat_id is None:
+                chat_id = file_chat_id
+
+            for msg in messages:
+                dedup_key = (
+                    int(msg.timestamp.timestamp() * 1000),
+                    msg.sender,
+                    msg.content,
+                )
+                if dedup_key in seen_entries:
+                    continue
+                seen_entries.add(dedup_key)
+                merged_messages.append(msg)
+
+        merged_messages.sort(key=lambda msg: msg.timestamp)
+        if chat_name is None or chat_id is None:
+            continue
+
+        conversation_name = f"{chat_name} ({chat_id})"
+        sigtop_content = convert_to_sigtop(merged_messages, conversation_name)
+        out_file = output_path / f"{_safe_filename(conversation_name)}.txt"
+        with open(out_file, "w", encoding="utf-8") as f:
+            f.write(sigtop_content)
+        converted_count += 1
+
+    print(f"Converted {converted_count} Messenger chats")
 
 
 def format_sigtop_timestamp(dt: datetime) -> str:
@@ -250,6 +409,7 @@ def process_input(
     output_path: Path,
     your_name: str | None = None,
     name_pattern: str | None = None,
+    chat_format: str = "Whatsapp",
 ) -> None:
     """
     Process input file or folder and write converted output.
@@ -274,6 +434,10 @@ def process_input(
     ValueError
         If input/output path types don't match (file vs directory).
     """
+    if chat_format == "Messenger":
+        process_messenger_input(input_path, output_path, your_name)
+        return
+
     if input_path.is_file():
         if output_path.is_dir():
             raise ValueError(
@@ -343,8 +507,16 @@ def main() -> int | None:
         "--name-pattern",
         type=str,
         default=None,
-        help="Pattern to extract chat name from filename, with %%s as placeholder "
+        help="Pattern to extract chat name from filename, with %%s as placeholder. Only used for WhatsApp exports."
         "(e.g., 'WhatsApp-chatt med %%s')",
+    )
+    parser.add_argument(
+        "--format",
+        type=str,
+        default="Whatsapp",
+        choices=["Whatsapp", "Messenger"],
+        help="Input format. Use 'Whatsapp' for existing .txt parsing or "
+        "'Messenger' for Facebook Messenger JSON exports.",
     )
 
     args = parser.parse_args()
@@ -353,7 +525,13 @@ def main() -> int | None:
     output_path = Path(args.output)
 
     try:
-        process_input(input_path, output_path, args.your_name, args.name_pattern)
+        process_input(
+            input_path,
+            output_path,
+            args.your_name,
+            args.name_pattern,
+            args.format,
+        )
     except ValueError as e:
         print(f"Error: {e}")
         return 1

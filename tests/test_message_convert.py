@@ -1,5 +1,6 @@
 """Tests for message_convert module."""
 
+import json
 from datetime import datetime
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from emoji_counter.message_convert import (
     convert_to_sigtop,
     extract_chat_name,
     format_sigtop_timestamp,
+    parse_messenger_file,
     parse_whatsapp_file,
     process_input,
 )
@@ -305,3 +307,152 @@ class TestProcessInput:
         output_content = output_file.read_text(encoding="utf-8")
         assert "From: You" in output_content
         assert "Type: outgoing" in output_content
+
+
+class TestMessengerConversion:
+    """Tests for Messenger JSON conversion."""
+
+    def test_parse_messenger_file(self, tmp_path: Path) -> None:
+        """Parse a Messenger JSON file into chat metadata and messages."""
+        thread_dir = tmp_path / "alice_12345"
+        thread_dir.mkdir()
+        message_file = thread_dir / "message_1.json"
+        message_file.write_text(
+            json.dumps(
+                {
+                    "title": "Alice Chat",
+                    "messages": [
+                        {
+                            "sender_name": "Simon",
+                            "timestamp_ms": 1717616400000,
+                            "content": "Hello",
+                        },
+                        {
+                            "sender_name": "Alice",
+                            "timestamp_ms": 1717617300000,
+                            "content": "Hi",
+                        },
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        chat_name, chat_id, messages = parse_messenger_file(message_file, your_name="Simon")
+
+        assert chat_name == "Alice Chat"
+        assert chat_id == "12345"
+        assert [msg.sender for msg in messages] == ["You", "Alice"]
+        assert [msg.content for msg in messages] == ["Hello", "Hi"]
+
+    def test_parse_messenger_file_repairs_mojibake(self, tmp_path: Path) -> None:
+        """Repair mojibake text from Messenger JSON content and title."""
+        thread_dir = tmp_path / "alice_12345"
+        thread_dir.mkdir()
+        message_file = thread_dir / "message_1.json"
+        message_file.write_text(
+            json.dumps(
+                {
+                    "title": "FÃ¶r chatten",
+                    "messages": [
+                        {
+                            "sender_name": "BjÃ¶rn",
+                            "timestamp_ms": 1717616400000,
+                            "content": "Hej ð",
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        chat_name, _, messages = parse_messenger_file(message_file)
+
+        assert chat_name == "För chatten"
+        assert messages[0].sender == "Björn"
+        assert messages[0].content == "Hej 😊"
+
+    def test_parse_messenger_file_without_underscore_uses_full_name(
+        self, tmp_path: Path
+    ) -> None:
+        """Use full thread folder name as chat ID when no underscore exists."""
+        thread_dir = tmp_path / "plainthreadname"
+        thread_dir.mkdir()
+        message_file = thread_dir / "message_1.json"
+        message_file.write_text(
+            json.dumps(
+                {
+                    "title": "Plain Thread",
+                    "messages": [
+                        {
+                            "sender_name": "Alice",
+                            "timestamp_ms": 1717616400000,
+                            "content": "Hello",
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        _, chat_id, _ = parse_messenger_file(message_file)
+
+        assert chat_id == "plainthreadname"
+
+    def test_process_messenger_directory(self, tmp_path: Path) -> None:
+        """Process Messenger export folder into sigtop files."""
+        input_dir = tmp_path / "messenger_export"
+        cutover_dir = (
+            input_dir / "your_facebook_activity" / "messages" / "e2ee_cutover" / "alice_12345"
+        )
+        inbox_dir = (
+            input_dir / "your_facebook_activity" / "messages" / "inbox" / "alice_12345"
+        )
+        cutover_dir.mkdir(parents=True)
+        inbox_dir.mkdir(parents=True)
+
+        (cutover_dir / "message_1.json").write_text(
+            json.dumps(
+                {
+                    "title": "Alice Chat",
+                    "messages": [
+                        {
+                            "sender_name": "Simon",
+                            "timestamp_ms": 1717616400000,
+                            "content": "First message",
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        (inbox_dir / "message_1.json").write_text(
+            json.dumps(
+                {
+                    "title": "Alice Chat",
+                    "messages": [
+                        {
+                            "sender_name": "Alice",
+                            "timestamp_ms": 1717617300000,
+                            "content": "Second message",
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        output_dir = tmp_path / "output"
+        process_input(
+            input_dir,
+            output_dir,
+            your_name="Simon",
+            chat_format="Messenger",
+        )
+
+        out_file = output_dir / "Alice Chat (12345).txt"
+        assert out_file.exists()
+        output_content = out_file.read_text(encoding="utf-8")
+        assert "Conversation: Alice Chat (12345)" in output_content
+        assert "From: You" in output_content
+        assert "From: Alice" in output_content
