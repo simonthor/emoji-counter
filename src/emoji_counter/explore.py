@@ -21,10 +21,6 @@ from dash.dependencies import Input, Output, State
 
 from emoji_counter.upload_processor import process_uploaded_file
 
-APP = dash.Dash(__name__)
-server = APP.server
-
-
 class EmojiExplorer:
     """
     Interactive Dash dashboard for exploring emoji usage data from SQLite.
@@ -41,17 +37,17 @@ class EmojiExplorer:
 
     Attributes
     ----------
-    db_paths : list of Path
-        Paths to SQLite database files.
     app : dash.Dash
         The Dash application instance.
+    db_paths : list of Path
+        Paths to SQLite database files.
 
     Notes
     -----
     Must call `run` to start the web server after initialization.
     """
 
-    def __init__(self, db_paths: list[Path] | None = None) -> None:
+    def __init__(self, app: dash.Dash, db_paths: list[Path] | None = None) -> None:
         """
         Initialize the explorer and configure the Dash application.
 
@@ -65,7 +61,7 @@ class EmojiExplorer:
             If None, users can upload files via the web interface.
         """
         self.db_paths = db_paths if db_paths else []
-        self.app = APP
+        self.app = app
         self.setup_layout()
         self.setup_callbacks()
 
@@ -1056,7 +1052,8 @@ def main() -> int | None:
             return 1
         db_paths.append(db_path)
 
-    explorer = EmojiExplorer(db_paths if db_paths else None)
+    app = dash.Dash(__name__)
+    explorer = EmojiExplorer(app, db_paths if db_paths else None)
     explorer.run(debug=args.debug, port=args.port)
     return None
 
