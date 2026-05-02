@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """
 Interactive Dash app for exploring emoji data from SQLite database(s).
+
+Supports both command-line database paths and web-based file uploads
+in various formats (Signal, WhatsApp, Messenger).
 """
 
 import argparse
+import base64
 import sqlite3
+import tempfile
 from pathlib import Path
 
 import dash
@@ -12,7 +17,9 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from dash import dcc, html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
+
+from emoji_counter.upload_processor import process_uploaded_file
 
 
 class EmojiExplorer:
@@ -26,6 +33,9 @@ class EmojiExplorer:
     Supports multiple database files. When multiple files are provided, chat names
     are suffixed with the database file stem in parentheses to distinguish sources.
 
+    Can be initialized with database paths or without. If initialized without paths,
+    users can upload .zip files via the web interface to load and analyze data.
+
     Attributes
     ----------
     db_paths : list of Path
@@ -38,7 +48,7 @@ class EmojiExplorer:
     Must call `run` to start the web server after initialization.
     """
 
-    def __init__(self, db_paths: list[Path]) -> None:
+    def __init__(self, db_paths: list[Path] | None = None) -> None:
         """
         Initialize the explorer and configure the Dash application.
 
@@ -47,10 +57,11 @@ class EmojiExplorer:
 
         Parameters
         ----------
-        db_paths : list of Path
+        db_paths : list of Path, optional
             List of paths to SQLite database files containing emojis table.
+            If None, users can upload files via the web interface.
         """
-        self.db_paths = db_paths
+        self.db_paths = db_paths if db_paths else []
         self.app = dash.Dash(__name__)
         self.setup_layout()
         self.setup_callbacks()
@@ -396,71 +407,191 @@ class EmojiExplorer:
 
     def setup_layout(self) -> None:
         """
-        Configure the Dash application layout with controls and plot area.
+        Configure the Dash application layout with controls, plot area, and file upload.
 
-        Creates dropdowns for chart type, user, and chat selection, and a graph
-        container for plots. The layout is assigned to self.app.layout.
-        Dropdown options are populated dynamically via callbacks.
+        Creates sections for file upload (when needed), database status, chart controls,
+        and graph display. Uses a Store component to maintain state of loaded databases.
+        Includes dropdowns for chart type, user, and chat selection.
         """
+        # Build initial database list display
+        # initial_db_display = []
+        # if self.db_paths:
+            # initial_db_display.append(
+        #         html.Div(
+        #             [
+        #                 html.H3("Loaded Databases:"),
+        #                 html.Ul(
+        #                     [
+        #                         html.Li(str(db_path), key=str(db_path))
+        #                         for db_path in self.db_paths
+        #                     ]
+        #                 ),
+        #             ],
+        #             style={"padding": "20px", "textAlign": "left"},
+        #         )
+        #     )
+
         self.app.layout = html.Div(
             [
+                dcc.Store(id="db-paths-store", data=[str(p) for p in self.db_paths]),
                 html.H1("🎭 Emoji Explorer 📊", style={"textAlign": "center"}),
+                # Upload section
                 html.Div(
-                    [
+                    id="upload-section",
+                    children=[
+                        html.Hr(),
                         html.Div(
                             [
-                                html.Label("Chart Type:"),
-                                dcc.Dropdown(
-                                    id="chart-type",
-                                    options=[
-                                        {"label": "Bar Chart", "value": "bar"},
-                                        {"label": "Pie Chart", "value": "pie"},
-                                        {"label": "Time Series", "value": "timeseries"},
+                                html.H2("Upload Chat Data", style={"textAlign": "center"}),
+                                html.Div(
+                                    [
+                                        html.Div(
+                                            [
+                                                html.Label("Chat Format:"),
+                                                dcc.Dropdown(
+                                                    id="format-selector",
+                                                    options=[
+                                                        {"label": "Signal", "value": "Signal"},
+                                                        {
+                                                            "label": "WhatsApp",
+                                                            "value": "Whatsapp",
+                                                        },
+                                                        {
+                                                            "label": "Messenger",
+                                                            "value": "Messenger",
+                                                        },
+                                                    ],
+                                                    value="Signal",
+                                                    clearable=False,
+                                                    style={"width": "150px"},
+                                                ),
+                                            ],
+                                            style={
+                                                "display": "inline-block",
+                                                "marginRight": "20px",
+                                            },
+                                        ),
+                                        html.Div(
+                                            [
+                                                dcc.Upload(
+                                                    id="file-upload",
+                                                    children=html.Div(
+                                                        [
+                                                            "Drag and drop or ",
+                                                            html.A("select a .zip file"),
+                                                        ]
+                                                    ),
+                                                    style={
+                                                        "width": "100%",
+                                                        "height": "60px",
+                                                        "lineHeight": "60px",
+                                                        "borderWidth": "1px",
+                                                        "borderStyle": "dashed",
+                                                        "borderRadius": "5px",
+                                                        "textAlign": "center",
+                                                        "margin": "10px",
+                                                    },
+                                                    multiple=False,
+                                                )
+                                            ],
+                                            style={"display": "inline-block", "width": "300px"},
+                                        ),
                                     ],
-                                    value="bar",
-                                    clearable=False,
-                                    style={"width": "200px"},
+                                    style={"textAlign": "center", "padding": "20px"},
                                 ),
+                                html.Div(id="upload-status", style={"padding": "10px"}),
                             ],
-                            style={"display": "inline-block", "marginRight": "20px"},
-                        ),
-                        html.Div(
-                            [
-                                html.Label("User:"),
-                                dcc.Dropdown(
-                                    id="user-filter",
-                                    value="everyone",
-                                    clearable=False,
-                                    style={"width": "200px"},
-                                ),
-                            ],
-                            style={"display": "inline-block", "marginRight": "20px"},
-                        ),
-                        html.Div(
-                            [
-                                html.Label("Chat:"),
-                                dcc.Dropdown(
-                                    id="chat-filter",
-                                    value="all",
-                                    clearable=False,
-                                    style={"width": "200px"},
-                                ),
-                            ],
-                            style={"display": "inline-block"},
+                            style={
+                                "border": "1px solid #ddd",
+                                "borderRadius": "5px",
+                                "padding": "20px",
+                                "margin": "20px",
+                                "backgroundColor": "#f9f9f9",
+                            },
                         ),
                     ],
-                    style={"padding": "20px", "textAlign": "center"},
+                    style={"display": "block" if not self.db_paths else "none"},
                 ),
+                # Loaded databases section
+                # html.Div(initial_db_display, id="db-list-container"),
+                # Main dashboard section
                 html.Div(
-                    [dcc.Graph(id="emoji-frequency-plot")], style={"padding": "20px"}
-                ),
-                html.Div(
-                    "Shortcut: Press Alt+S to save the current chart view.",
+                    id="dashboard-section",
+                    children=[
+                        html.Hr(),
+                        html.Div(
+                            [
+                                html.Div(
+                                    [
+                                        html.Label("Chart Type:"),
+                                        dcc.Dropdown(
+                                            id="chart-type",
+                                            options=[
+                                                {"label": "Bar Chart", "value": "bar"},
+                                                {"label": "Pie Chart", "value": "pie"},
+                                                {
+                                                    "label": "Time Series",
+                                                    "value": "timeseries",
+                                                },
+                                            ],
+                                            value="bar",
+                                            clearable=False,
+                                            style={"width": "200px"},
+                                        ),
+                                    ],
+                                    style={
+                                        "display": "inline-block",
+                                        "marginRight": "20px",
+                                    },
+                                ),
+                                html.Div(
+                                    [
+                                        html.Label("User:"),
+                                        dcc.Dropdown(
+                                            id="user-filter",
+                                            value="everyone",
+                                            clearable=False,
+                                            style={"width": "200px"},
+                                        ),
+                                    ],
+                                    style={
+                                        "display": "inline-block",
+                                        "marginRight": "20px",
+                                    },
+                                ),
+                                html.Div(
+                                    [
+                                        html.Label("Chat:"),
+                                        dcc.Dropdown(
+                                            id="chat-filter",
+                                            value="all",
+                                            clearable=False,
+                                            style={"width": "200px"},
+                                        ),
+                                    ],
+                                    style={"display": "inline-block"},
+                                ),
+                            ],
+                            style={"padding": "20px", "textAlign": "center"},
+                        ),
+                        html.Div(
+                            [dcc.Graph(id="emoji-frequency-plot")],
+                            style={"padding": "20px"},
+                        ),
+                        html.Div(
+                            "Shortcut: Press Alt+S to save the current chart view.",
+                            style={
+                                "textAlign": "center",
+                                "color": "#666",
+                                "fontSize": "0.9rem",
+                                "paddingBottom": "20px",
+                            },
+                        ),
+                    ],
                     style={
-                        "textAlign": "center",
-                        "color": "#666",
-                        "fontSize": "0.9rem",
-                        "paddingBottom": "20px",
+                        "display": "block"
+                        if self.db_paths
+                        else "none"
                     },
                 ),
             ]
@@ -515,12 +646,146 @@ class EmojiExplorer:
         Register interactive callbacks for chart and filter updates.
 
         Creates callbacks to:
-        1. Update user dropdown options based on selected chat
-        2. Update chat dropdown options based on selected user
-        3. Regenerate the plot when any filter changes
+        1. Handle file uploads and process chat data
+        2. Update user dropdown options based on selected chat
+        3. Update chat dropdown options based on selected user
+        4. Regenerate the plot when any filter changes
 
         The callbacks are registered with the self.app instance.
         """
+
+        @self.app.callback(
+            Output("db-paths-store", "data"),
+            Output("upload-status", "children"),
+            Output("upload-section", "style"),
+            Output("dashboard-section", "style"),
+            # Output("db-list-container", "children"),
+            Input("file-upload", "contents"),
+            State("file-upload", "filename"),
+            State("format-selector", "value"),
+            State("db-paths-store", "data"),
+            prevent_initial_call=True,
+        )
+        def handle_file_upload(
+            contents: str | None,
+            filename: str | None,
+            chat_format: str,
+            stored_db_paths: list[str],
+        ) -> tuple[
+            list[str],
+            html.Div,
+            dict[str, str],
+            dict[str, str],
+            # html.Div,
+        ]:
+            """
+            Handle file upload, process data, and update dashboard state.
+
+            Processes the uploaded .zip file in the specified format,
+            extracts emojis, and adds the resulting database to the list
+            of loaded databases.
+
+            Parameters
+            ----------
+            contents : str or None
+                Base64-encoded file contents from the upload component.
+            filename : str or None
+                Original filename of the uploaded file.
+            chat_format : str
+                Selected chat format (Signal, Whatsapp, or Messenger).
+            stored_db_paths : list of str
+                Current list of loaded database paths.
+
+            Returns
+            -------
+            tuple
+                Updated db paths, status message, and UI visibility styles.
+            """
+            if not contents or not filename:
+                return (
+                    stored_db_paths,
+                    html.Div("No file selected", style={"color": "red"}),
+                    {"display": "block"},
+                    {"display": "none" if not stored_db_paths else "block"},
+                    # html.Div(),
+                )
+
+            try:
+                # Decode the uploaded file
+                content_type, content_string = contents.split(",")
+                zip_bytes = base64.b64decode(content_string)
+
+                # Process the uploaded file in a temporary location
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    output_db_path = Path(temp_dir) / "emojis.sql"
+
+                    process_uploaded_file(
+                        zip_bytes,
+                        chat_format,
+                        output_db_path,
+                    )
+
+                    # Copy the database to a persistent location
+                    db_dir = Path("data") / "uploads"
+                    db_dir.mkdir(parents=True, exist_ok=True)
+                    import uuid
+
+                    persistent_db_path = (
+                        db_dir
+                        / f"emojis_{uuid.uuid4().hex[:8]}_{filename.replace('.zip', '.sql')}"
+                    )
+                    import shutil
+
+                    shutil.copy2(output_db_path, persistent_db_path)
+
+                    # Update the stored paths
+                    updated_paths = stored_db_paths + [str(persistent_db_path)]
+
+                    # Create success message
+                    status_msg = html.Div(
+                        f"Successfully loaded data from {filename}",
+                        style={"color": "green", "padding": "10px"},
+                    )
+
+                    # Build database list display
+                    db_list_items = [
+                        html.Li(f"{Path(p).name}: {p}") for p in updated_paths
+                    ]
+                    # db_list = html.Div(
+                    #     [
+                    #         html.H3("Loaded Databases:"),
+                    #         html.Ul(db_list_items),
+                    #     ],
+                    #     style={"padding": "20px", "textAlign": "left"},
+                    # )
+
+                    # Update db_paths in the explorer instance so queries work
+                    self.db_paths = [Path(p) for p in updated_paths]
+
+                    return (
+                        updated_paths,
+                        status_msg,
+                        {"display": "none"},  # Hide upload section
+                        {"display": "block"},  # Show dashboard section
+                        # db_list,
+                    )
+
+            except Exception as e:
+                error_msg = html.Div(
+                    f"Error processing file: {str(e)}",
+                    style={"color": "red", "padding": "10px"},
+                )
+                return (
+                    stored_db_paths,
+                    error_msg,
+                    {"display": "block"},  # Keep upload section visible
+                    {
+                        "display": "block"
+                        if stored_db_paths
+                        else "none"
+                    },  # Keep dashboard if other DBs exist
+                    # html.Div(),
+                )
 
         @self.app.callback(
             Output("user-filter", "options"),
@@ -736,9 +1001,9 @@ def main() -> int | None:
     Parse arguments, validate database paths, and launch the dashboard.
 
     Parses command-line arguments for database path(s) and server options. Validates
-    that all database files exist before initializing EmojiExplorer.
-    Returns exit code 1 if any database is not found, otherwise blocks until
-    the server is interrupted.
+    that all database files exist before initializing EmojiExplorer. If no database
+    paths are provided, starts the dashboard in upload mode where users can upload
+    .zip files via the web interface.
 
     Returns
     -------
@@ -751,8 +1016,8 @@ def main() -> int | None:
     parser.add_argument(
         "db_paths",
         type=str,
-        nargs="+",
-        help="Path(s) to SQLite database file(s)",
+        nargs="*",
+        help="Path(s) to SQLite database file(s). If not provided, start in upload mode.",
     )
     parser.add_argument(
         "--port",
@@ -772,7 +1037,7 @@ def main() -> int | None:
             return 1
         db_paths.append(db_path)
 
-    explorer = EmojiExplorer(db_paths)
+    explorer = EmojiExplorer(db_paths if db_paths else None)
     explorer.run(debug=args.debug, port=args.port)
     return None
 
