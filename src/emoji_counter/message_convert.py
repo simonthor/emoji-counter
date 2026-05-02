@@ -160,8 +160,8 @@ def _repair_messenger_text(text: str) -> str:
 
     Example: "FÃ¶r" -> "För".
     """
-    mojibake_markers = ("Ã", "Â", "ð", "â", "€", "™")
-    if not any(marker in text for marker in mojibake_markers):
+    suspicious_before = _mojibake_score(text)
+    if suspicious_before == 0:
         return text
 
     try:
@@ -169,7 +169,18 @@ def _repair_messenger_text(text: str) -> str:
     except UnicodeError:
         return text
 
-    return repaired
+    suspicious_after = _mojibake_score(repaired)
+    return repaired if suspicious_after < suspicious_before else text
+
+
+def _mojibake_score(text: str) -> int:
+    """
+    Return a heuristic score for common UTF-8-as-Latin-1 mojibake artifacts.
+    """
+    marker_chars = {"Ã", "Â", "ã", "â", "ð"}
+    marker_score = sum(1 for ch in text if ch in marker_chars)
+    c1_control_score = sum(1 for ch in text if 0x80 <= ord(ch) <= 0x9F)
+    return marker_score + c1_control_score
 
 
 def _safe_filename(value: str) -> str:

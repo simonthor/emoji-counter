@@ -11,6 +11,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple
 
+from tqdm import tqdm
+
 import emoji
 import pandas as pd
 
@@ -32,6 +34,29 @@ def extract_emojis(text: str) -> List[str]:
     return [c.chars for c in emoji.analyze(text, join_emoji=True)]
 
 
+def _mojibake_score(text: str) -> int:
+    """Return a heuristic score for UTF-8-as-Latin-1 mojibake artifacts."""
+    marker_chars = {"Ã", "Â", "ã", "â", "ð"}
+    marker_score = sum(1 for ch in text if ch in marker_chars)
+    c1_control_score = sum(1 for ch in text if 0x80 <= ord(ch) <= 0x9F)
+    return marker_score + c1_control_score
+
+
+def _repair_mojibake_text(text: str) -> str:
+    """Repair mojibake text only when the result is clearly better."""
+    suspicious_before = _mojibake_score(text)
+    if suspicious_before == 0:
+        return text
+
+    try:
+        repaired = text.encode("latin-1").decode("utf-8")
+    except UnicodeError:
+        return text
+
+    suspicious_after = _mojibake_score(repaired)
+    return repaired if suspicious_after < suspicious_before else text
+
+
 def parse_message_file(file_path: Path) -> List[Tuple[str, str, str, str]]:
     """
     Parse a message file and extract emoji data.
@@ -50,6 +75,7 @@ def parse_message_file(file_path: Path) -> List[Tuple[str, str, str, str]]:
     chat_name = file_path.stem
     # Remove text in parentheses from chat name
     chat_name = re.sub(r"\s*\([^)]*\)", "", chat_name).strip()
+    chat_name = _repair_mojibake_text(chat_name)
 
     results = []
 
@@ -71,6 +97,7 @@ def parse_message_file(file_path: Path) -> List[Tuple[str, str, str, str]]:
 
         if "(" in username:
             username = username[: username.rfind("(")].strip()
+        username = _repair_mojibake_text(username)
 
         # Extract timestamp from "Sent:" line
         sent_match = re.search(r"^Sent:\s*(.+?)$", message, re.MULTILINE)
@@ -88,8 +115,10 @@ def parse_message_file(file_path: Path) -> List[Tuple[str, str, str, str]]:
             # If parsing fails, keep the original string
             timestamp = timestamp_str
 
-        # Extract emojis from the message content
-        emojis = extract_emojis(message)
+        # Repair mojibake before extracting emojis so broken UTF-8 sequences
+        # (e.g. "ð") are recovered as real emoji.
+        normalized_message = _repair_mojibake_text(message)
+        emojis = extract_emojis(normalized_message)
 
         for em in emojis:
             results.append((em, timestamp, username, chat_name))
@@ -121,7 +150,7 @@ def process_input(input_path: Path) -> pd.DataFrame:
     if input_path.is_file():
         all_data.extend(parse_message_file(input_path))
     elif input_path.is_dir():
-        for file_path in input_path.glob("*.txt"):
+        for file_path in tqdm(input_path.glob("*.txt"), desc="Processing files"):
             all_data.extend(parse_message_file(file_path))
     else:
         raise ValueError(f"Input path does not exist: {input_path}")
