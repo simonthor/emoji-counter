@@ -33,17 +33,19 @@ The dashboard includes a built-in upload feature that lets you process chat expo
 
 ### Tips for File Preparation
 
-**Signal**: Use [sigtop](https://github.com/tbvdm/sigtop/) to export your Signal messages, then zip the entire messages directory.
+#### Signal: 
+- Use [sigtop](https://github.com/tbvdm/sigtop/) to export your Signal messages, then zip the entire messages directory.
 
-**WhatsApp**: 
+#### WhatsApp: 
 - Export each chat individually following [WhatsApp's instructions](https://faq.whatsapp.com/1180414079177245/)
 - Zip all your chat exports into a single `.zip` file
 - Recommend exporting without media for faster processing
 
-**Messenger**:
+#### Messenger:
 - Download your data from [Facebook's Download Your Information page](https://www.facebook.com/download/your_information)
 - Select JSON format and "Messages" data type
-- Upload the downloaded `.zip` file directly
+- Remove the `photos/` folders, as these take up a lot os space and aren't needed for emoji analysis (optional but highly recommended)
+Upload the downloaded `.zip` file directly
 
 ## Launching the Dashboard
 
@@ -56,6 +58,11 @@ emoji-explore
 ```
 
 This allows you to upload chat exports directly through the web interface. Uploaded data will be saved to `data/uploads/` and automatically loaded into the dashboard.
+
+Note that some charts and features might not show up immediately while it is processing the uploaded file. During this time, it will be written "Updating..." on the tab.
+
+!!! warning "Warning" 
+      Once processing is complete, the plots might still not show up and it might say "No data available". If this happens, click around a bit by e.g. selecting "Pie chart" or changing the filters for the User or Chat. This will trigger the dashboard to check for new data and update the charts.
 
 ### Single Database
 
