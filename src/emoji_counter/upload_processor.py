@@ -98,7 +98,7 @@ def process_uploaded_file(
         # (e.g., Messenger.zip extracts to "extracted/Messenger original/")
         contents = list(extract_dir.iterdir())
         messages_source = extract_dir
-        
+
         # Only descend into subdirectory if:
         # 1. There's exactly one subdirectory, AND
         # 2. There are no .txt files at the root level (for Signal/WhatsApp), AND
@@ -116,7 +116,7 @@ def process_uploaded_file(
                 has_required_structure = (
                     extract_dir / "your_facebook_activity" / "messages"
                 ).is_dir()
-            
+
             # If structure is not at root, try the subdirectory
             if not has_required_structure:
                 messages_source = contents[0]

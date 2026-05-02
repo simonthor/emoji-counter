@@ -107,9 +107,7 @@ class TestParseMessageFile:
         assert len(result) == 1
         assert result[0][3] == jp_name
 
-    def test_parse_repairs_mojibake_content_for_emoji_extraction(
-        self, tmp_path: Path
-    ):
+    def test_parse_repairs_mojibake_content_for_emoji_extraction(self, tmp_path: Path):
         """Extract emoji from mojibake message content."""
         file_path = tmp_path / "chat (1).txt"
         file_path.write_text(

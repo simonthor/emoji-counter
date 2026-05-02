@@ -66,7 +66,9 @@ class EmojiExplorer:
         self.setup_layout()
         self.setup_callbacks()
 
-    def _query_all_databases(self, query: str, params: list[str] | None = None) -> pd.DataFrame:
+    def _query_all_databases(
+        self, query: str, params: list[str] | None = None
+    ) -> pd.DataFrame:
         """
         Execute a query against all databases and combine results.
 
@@ -413,24 +415,7 @@ class EmojiExplorer:
         and graph display. Uses a Store component to maintain state of loaded databases.
         Includes dropdowns for chart type, user, and chat selection.
         """
-        # Build initial database list display
-        # initial_db_display = []
-        # if self.db_paths:
-            # initial_db_display.append(
-        #         html.Div(
-        #             [
-        #                 html.H3("Loaded Databases:"),
-        #                 html.Ul(
-        #                     [
-        #                         html.Li(str(db_path), key=str(db_path))
-        #                         for db_path in self.db_paths
-        #                     ]
-        #                 ),
-        #             ],
-        #             style={"padding": "20px", "textAlign": "left"},
-        #         )
-        #     )
-
+        
         self.app.layout = html.Div(
             [
                 dcc.Store(id="db-paths-store", data=[str(p) for p in self.db_paths]),
@@ -442,7 +427,9 @@ class EmojiExplorer:
                         html.Hr(),
                         html.Div(
                             [
-                                html.H2("Upload Chat Data", style={"textAlign": "center"}),
+                                html.H2(
+                                    "Upload Chat Data", style={"textAlign": "center"}
+                                ),
                                 html.Div(
                                     [
                                         html.Div(
@@ -451,7 +438,10 @@ class EmojiExplorer:
                                                 dcc.Dropdown(
                                                     id="format-selector",
                                                     options=[
-                                                        {"label": "Signal", "value": "Signal"},
+                                                        {
+                                                            "label": "Signal",
+                                                            "value": "Signal",
+                                                        },
                                                         {
                                                             "label": "WhatsApp",
                                                             "value": "Whatsapp",
@@ -478,7 +468,9 @@ class EmojiExplorer:
                                                     children=html.Div(
                                                         [
                                                             "Drag and drop or ",
-                                                            html.A("select a .zip file"),
+                                                            html.A(
+                                                                "select a .zip file"
+                                                            ),
                                                         ]
                                                     ),
                                                     style={
@@ -494,7 +486,10 @@ class EmojiExplorer:
                                                     multiple=False,
                                                 )
                                             ],
-                                            style={"display": "inline-block", "width": "300px"},
+                                            style={
+                                                "display": "inline-block",
+                                                "width": "300px",
+                                            },
                                         ),
                                     ],
                                     style={"textAlign": "center", "padding": "20px"},
@@ -512,8 +507,6 @@ class EmojiExplorer:
                     ],
                     style={"display": "block" if not self.db_paths else "none"},
                 ),
-                # Loaded databases section
-                # html.Div(initial_db_display, id="db-list-container"),
                 # Main dashboard section
                 html.Div(
                     id="dashboard-section",
@@ -588,11 +581,7 @@ class EmojiExplorer:
                             },
                         ),
                     ],
-                    style={
-                        "display": "block"
-                        if self.db_paths
-                        else "none"
-                    },
+                    style={"display": "block" if self.db_paths else "none"},
                 ),
             ]
         )
@@ -659,7 +648,6 @@ class EmojiExplorer:
             Output("upload-status", "children"),
             Output("upload-section", "style"),
             Output("dashboard-section", "style"),
-            # Output("db-list-container", "children"),
             Input("file-upload", "contents"),
             State("file-upload", "filename"),
             State("format-selector", "value"),
@@ -747,18 +735,6 @@ class EmojiExplorer:
                         style={"color": "green", "padding": "10px"},
                     )
 
-                    # Build database list display
-                    db_list_items = [
-                        html.Li(f"{Path(p).name}: {p}") for p in updated_paths
-                    ]
-                    # db_list = html.Div(
-                    #     [
-                    #         html.H3("Loaded Databases:"),
-                    #         html.Ul(db_list_items),
-                    #     ],
-                    #     style={"padding": "20px", "textAlign": "left"},
-                    # )
-
                     # Update db_paths in the explorer instance so queries work
                     self.db_paths = [Path(p) for p in updated_paths]
 
@@ -767,7 +743,6 @@ class EmojiExplorer:
                         status_msg,
                         {"display": "none"},  # Hide upload section
                         {"display": "block"},  # Show dashboard section
-                        # db_list,
                     )
 
             except Exception as e:
@@ -780,9 +755,7 @@ class EmojiExplorer:
                     error_msg,
                     {"display": "block"},  # Keep upload section visible
                     {
-                        "display": "block"
-                        if stored_db_paths
-                        else "none"
+                        "display": "block" if stored_db_paths else "none"
                     },  # Keep dashboard if other DBs exist
                     # html.Div(),
                 )
@@ -884,7 +857,7 @@ class EmojiExplorer:
                 emoji_order = (
                     df.groupby("emoji")["cumcount"]
                     .last()
-                    .sort_values(ascending=False) # type: ignore
+                    .sort_values(ascending=False)  # type: ignore
                     .index.tolist()
                 )
 

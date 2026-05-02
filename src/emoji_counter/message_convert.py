@@ -15,9 +15,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-WHATSAPP_MSG_PATTERN = re.compile(
-    r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}) - ([^:]+): (.*)$"
-)
+WHATSAPP_MSG_PATTERN = re.compile(r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}) - ([^:]+): (.*)$")
 """Regex pattern matching WhatsApp message lines."""
 
 
@@ -41,9 +39,7 @@ class Message:
     content: str
 
 
-def parse_whatsapp_file(
-    file_path: Path, your_name: str | None = None
-) -> list[Message]:
+def parse_whatsapp_file(file_path: Path, your_name: str | None = None) -> list[Message]:
     """
     Parse a WhatsApp chat export file into a list of messages.
 
@@ -206,9 +202,7 @@ def process_messenger_input(
 
     messages_root = input_path / "your_facebook_activity" / "messages"
     if not messages_root.is_dir():
-        raise ValueError(
-            "Messenger input must contain your_facebook_activity/messages"
-        )
+        raise ValueError("Messenger input must contain your_facebook_activity/messages")
 
     cutover_dir = messages_root / "e2ee_cutover"
     inbox_dir = messages_root / "inbox"

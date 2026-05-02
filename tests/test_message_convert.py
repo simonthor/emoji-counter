@@ -225,7 +225,7 @@ class TestExtractChatName:
         """Extract empty name when pattern matches exactly."""
         path = Path("prefix_suffix.txt")
         assert extract_chat_name(path, "prefix_%s_suffix") == ""
-    
+
 
 class TestProcessInput:
     """Tests for process_input function."""
@@ -237,9 +237,7 @@ class TestProcessInput:
         input_file.write_text(content, encoding="utf-8")
         output_file = tmp_path / "output.txt"
 
-        process_input(
-            input_file, output_file, name_pattern="WhatsApp-chatt med %s"
-        )
+        process_input(input_file, output_file, name_pattern="WhatsApp-chatt med %s")
 
         assert output_file.exists()
         output_content = output_file.read_text(encoding="utf-8")
@@ -274,7 +272,9 @@ class TestProcessInput:
         output_dir = tmp_path / "output"
         output_dir.mkdir()
 
-        with pytest.raises(ValueError, match="Input is a file but output is a directory"):
+        with pytest.raises(
+            ValueError, match="Input is a file but output is a directory"
+        ):
             process_input(input_file, output_dir)
 
     def test_process_directory_to_file_raises(self, tmp_path: Path) -> None:
@@ -287,7 +287,9 @@ class TestProcessInput:
         output_file = tmp_path / "output.txt"
         output_file.write_text("existing", encoding="utf-8")
 
-        with pytest.raises(ValueError, match="Input is a directory but output is a file"):
+        with pytest.raises(
+            ValueError, match="Input is a directory but output is a file"
+        ):
             process_input(input_dir, output_file)
 
     def test_process_nonexistent_input_raises(self, tmp_path: Path) -> None:
@@ -338,7 +340,9 @@ class TestMessengerConversion:
             encoding="utf-8",
         )
 
-        chat_name, chat_id, messages = parse_messenger_file(message_file, your_name="Simon")
+        chat_name, chat_id, messages = parse_messenger_file(
+            message_file, your_name="Simon"
+        )
 
         assert chat_name == "Alice Chat"
         assert chat_id == "12345"
@@ -404,7 +408,11 @@ class TestMessengerConversion:
         """Process Messenger export folder into sigtop files."""
         input_dir = tmp_path / "messenger_export"
         cutover_dir = (
-            input_dir / "your_facebook_activity" / "messages" / "e2ee_cutover" / "alice_12345"
+            input_dir
+            / "your_facebook_activity"
+            / "messages"
+            / "e2ee_cutover"
+            / "alice_12345"
         )
         inbox_dir = (
             input_dir / "your_facebook_activity" / "messages" / "inbox" / "alice_12345"
