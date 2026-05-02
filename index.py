@@ -4,4 +4,4 @@ import dash
 app = dash.Dash(__name__)
 server = app.server
 explorer = EmojiExplorer(app)
-explorer.run(port=8000)
+explorer.run(port=10000)
