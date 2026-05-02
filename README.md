@@ -5,6 +5,8 @@ Extract and visualize emoji usage from chat messages.
 
 ## Features
 
+- **Web-based file upload** to process chat exports directly in the dashboard
+- **Multi-platform support**: Signal, WhatsApp, and Messenger
 - **Extract emojis** from chat message files into a SQLite database
 - **Convert chat exports** from WhatsApp and other formats to the supported format
 - **Interactive dashboard** to explore emoji usage patterns
@@ -37,9 +39,31 @@ pip install .
 
 ## Usage
 
+### Quick Start: Upload via Web Interface
+
+The simplest way to get started is to use the web-based file upload feature:
+
+1. Launch the dashboard with no database files:
+   ```bash
+   emoji-explore
+   ```
+
+2. Open your browser to [http://127.0.0.1:8050](http://127.0.0.1:8050)
+
+3. In the dashboard, you'll see an "Upload Chat Data" section where you can:
+   - Select your chat format (Signal, WhatsApp, or Messenger)
+   - Drag and drop or click to upload your `.zip` file
+   - The system will automatically extract, process, and display the data
+
+4. The chart will update automatically once processing is complete
+
+### Traditional Workflow: Command-Line Tools
+
+If you prefer using command-line tools or need more control over the process, follow these steps:
+
 ### 1. Prepare Message Files
 
-The program supports two main sources for chat exports: Signal (via sigtop) and WhatsApp.
+The program supports message exports from Signal, WhatsApp, and Messenger platforms.
 
 #### Signal Messages (via sigtop)
 
@@ -111,6 +135,24 @@ WhatsApp exports typically have this format:
 ```
 
 The converter transforms this into the standard `sigtop` format used by this tool.
+
+#### Messenger Messages
+
+You can download your Messenger chat data from Facebook by following the instructions [here](https://www.facebook.com/download/your_information).
+
+When downloading, make sure to select:
+- **Format**: JSON
+- **Date range**: All time
+- **Information types**: Messages
+
+The downloaded file will contain JSON exports of your Messenger conversations. You can process this directly using the web interface by uploading the `.zip` file, or use the `message-convert` tool from the command line:
+
+```bash
+# Convert a Messenger export directory
+message-convert -i messenger_exports/ -o converted/
+```
+
+When using command-line conversion, Messenger JSON files are automatically processed and converted to the standard format. Output files are renamed to `{conversation_name} (Messenger).txt`.
 
 ### 2. Extract Emojis
 

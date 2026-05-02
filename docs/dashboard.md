@@ -2,7 +2,60 @@
 
 The interactive dashboard lets you explore emoji usage patterns through visualizations and filters.
 
+## Uploading Chat Data
+
+### Quick Upload
+
+The dashboard includes a built-in upload feature that lets you process chat exports without command-line tools:
+
+1. **Select Format**: Choose the format of your chat data:
+   - **Signal**: Exports from Signal desktop via sigtop
+   - **WhatsApp**: Exported chats from WhatsApp
+   - **Messenger**: Downloaded data from Facebook Messenger
+
+2. **Upload File**: Drag and drop or click to select your `.zip` file
+
+3. **Processing**: The system will automatically:
+   - Extract the .zip file
+   - Handle nested directory structures
+   - Convert the format (if needed)
+   - Extract emojis
+   - Create a database in `data/uploads/`
+   - Display the data in the chart
+
+4. **View Results**: Once processing is complete, the chart will automatically update with your emoji frequency data
+
+### Supported File Formats
+
+- **Signal**: `.zip` file containing `.txt` message exports from sigtop
+- **WhatsApp**: `.zip` file containing WhatsApp chat export(s)
+- **Messenger**: `.zip` file downloaded from Facebook containing JSON message exports
+
+### Tips for File Preparation
+
+**Signal**: Use [sigtop](https://github.com/tbvdm/sigtop/) to export your Signal messages, then zip the entire messages directory.
+
+**WhatsApp**: 
+- Export each chat individually following [WhatsApp's instructions](https://faq.whatsapp.com/1180414079177245/)
+- Zip all your chat exports into a single `.zip` file
+- Recommend exporting without media for faster processing
+
+**Messenger**:
+- Download your data from [Facebook's Download Your Information page](https://www.facebook.com/download/your_information)
+- Select JSON format and "Messages" data type
+- Upload the downloaded `.zip` file directly
+
 ## Launching the Dashboard
+
+### No Database (Upload Mode)
+
+Start the dashboard without any databases to use the file upload feature:
+
+```bash
+emoji-explore
+```
+
+This allows you to upload chat exports directly through the web interface. Uploaded data will be saved to `data/uploads/` and automatically loaded into the dashboard.
 
 ### Single Database
 

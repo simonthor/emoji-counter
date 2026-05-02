@@ -128,9 +128,24 @@ Either:
 
 Messenger exports can be converted directly from JSON to sigtop format.
 
-### TODO: Add download instructions
+### Downloading Your Messenger Data
 
-> **TODO:** Add step-by-step instructions for downloading Messenger data export.
+To get your Messenger chat data from Facebook:
+
+1. Go to [Facebook Settings & Privacy > Settings](https://www.facebook.com/settings)
+2. In the left menu, click "Your information"
+3. Click "Download Your Information"
+4. Scroll down and select your download preferences:
+   - **Format**: JSON
+   - **Media Quality**: Leave as default
+   - **Date range**: Choose as needed (recommended: All time)
+5. In "Information types" section, scroll down and select:
+   - Check only "Messages"
+6. Click "Request Download"
+7. Facebook will prepare your data and send you an email with a download link
+8. Download the `.zip` file and extract it
+
+The extracted folder will contain your Messenger data ready for conversion.
 
 ### Required Input Structure
 

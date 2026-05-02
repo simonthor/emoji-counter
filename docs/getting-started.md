@@ -48,11 +48,35 @@ uv run emoji-explore --help
 
 ## Next Steps
 
-Now that you have Emoji Counter installed, you can:
+Now that you have Emoji Counter installed, you have two options:
+
+### Option 1: Web Interface (Recommended for Beginners)
+
+The easiest way to get started is to use the built-in web interface:
+
+1. Launch the dashboard:
+   ```bash
+   emoji-explore
+   ```
+
+2. Open [http://127.0.0.1:8050](http://127.0.0.1:8050) in your browser
+
+3. Use the "Upload Chat Data" section to:
+   - Select your chat format (Signal, WhatsApp, or Messenger)
+   - Upload your `.zip` file
+   - The data will be automatically processed and displayed
+
+See [Dashboard Usage](dashboard.md) for more details on uploading and exploring your data.
+
+### Option 2: Command-Line Tools (Advanced)
+
+If you prefer more control or need to batch process multiple files:
 
 1. [Convert your chat exports](message-conversion.md) to the supported format
 2. [Extract emojis](emoji-extraction.md) from your messages
 3. [Explore the data](dashboard.md) in the interactive dashboard
+
+This approach gives you fine-grained control over the conversion and extraction process.
 
 ## Troubleshooting
 
