@@ -20,6 +20,9 @@ def extract_zip_file(zip_bytes: bytes, output_dir: Path) -> None:
     """
     Extract a zip file from bytes into the specified directory.
 
+    SECURITY: Validates that all extracted files remain within output_dir
+    to prevent path traversal attacks.
+
     Parameters
     ----------
     zip_bytes : bytes
@@ -31,9 +34,24 @@ def extract_zip_file(zip_bytes: bytes, output_dir: Path) -> None:
     ------
     zipfile.BadZipFile
         If the provided bytes are not a valid zip file.
+    ValueError
+        If the zip file attempts path traversal outside output_dir.
     """
+    output_dir = output_dir.resolve()
+    
     with zipfile.ZipFile(BytesIO(zip_bytes)) as zf:
-        zf.extractall(output_dir)
+        for member in zf.namelist():
+            # Resolve the target path and ensure it's within output_dir
+            member_path = (output_dir / member).resolve()
+            
+            # Prevent path traversal attacks
+            if not str(member_path).startswith(str(output_dir)):
+                raise ValueError(
+                    f"Attempted path traversal detected in zip file: {member}"
+                )
+            
+            # Extract safely
+            zf.extract(member, output_dir)
 
 
 def process_uploaded_file(

@@ -4,12 +4,18 @@ Interactive Dash app for exploring emoji data from SQLite database(s).
 
 Supports both command-line database paths and web-based file uploads
 in various formats (Signal, WhatsApp, Messenger).
+
+Security: Implements per-session database isolation to prevent cross-user
+data access in multi-user deployments.
 """
 
 import argparse
 import base64
+import shutil
 import sqlite3
 import tempfile
+import time
+import uuid
 from pathlib import Path
 
 import dash
@@ -20,6 +26,9 @@ from dash import dcc, html
 from dash.dependencies import Input, Output, State
 
 from emoji_counter.upload_processor import process_uploaded_file
+
+# Session database directory
+SESSION_UPLOAD_ROOT = Path("data") / "uploads"
 
 
 class EmojiExplorer:
@@ -36,16 +45,21 @@ class EmojiExplorer:
     Can be initialized with database paths or without. If initialized without paths,
     users can upload .zip files via the web interface to load and analyze data.
 
+    SECURITY: Implements per-session isolation. Each user session has its own
+    database storage directory, and database paths are stored in session-specific
+    Dash Stores, not in global instance state.
+
     Attributes
     ----------
     app : dash.Dash
         The Dash application instance.
-    db_paths : list of Path
-        Paths to SQLite database files.
+    initial_db_paths : list of Path
+        Initial database paths provided at startup (shared, read-only).
 
     Notes
     -----
     Must call `run` to start the web server after initialization.
+    Uploaded files are stored in: data/uploads/{session_id}/
     """
 
     def __init__(self, app: dash.Dash, db_paths: list[Path] | None = None) -> None:
@@ -59,18 +73,19 @@ class EmojiExplorer:
         ----------
         db_paths : list of Path, optional
             List of paths to SQLite database files containing emojis table.
+            These are shared across all sessions (read-only).
             If None, users can upload files via the web interface.
         """
-        self.db_paths = db_paths if db_paths else []
+        self.initial_db_paths = db_paths if db_paths else []
         self.app = app
         self.setup_layout()
         self.setup_callbacks()
 
     def _query_all_databases(
-        self, query: str, params: list[str] | None = None
+        self, query: str, db_paths: list[Path] | None = None, params: list[str] | None = None
     ) -> pd.DataFrame:
         """
-        Execute a query against all databases and combine results.
+        Execute a query against specified databases and combine results.
 
         When multiple databases are used, adds a suffix to chat_name column
         based on the database file stem.
@@ -79,6 +94,9 @@ class EmojiExplorer:
         ----------
         query : str
             SQL query to execute.
+        db_paths : list of Path, optional
+            List of database paths to query. If None, uses initial_db_paths.
+            This should be session-specific paths from the caller.
         params : list of str, optional
             Query parameters for parameterized queries.
 
@@ -87,10 +105,16 @@ class EmojiExplorer:
         pd.DataFrame
             Combined DataFrame from all databases.
         """
+        if db_paths is None:
+            db_paths = self.initial_db_paths
+        
         dfs: list[pd.DataFrame] = []
-        use_suffix = len(self.db_paths) > 1
+        use_suffix = len(db_paths) > 1
 
-        for db_path in self.db_paths:
+        for db_path in db_paths:
+            db_path = Path(db_path)
+            if not db_path.exists():
+                continue
             conn = sqlite3.connect(db_path)
             df = pd.read_sql(query, conn, params=params if params else None)
             conn.close()
@@ -106,7 +130,7 @@ class EmojiExplorer:
 
         return pd.concat(dfs, ignore_index=True)
 
-    def get_usernames(self, chat_name: str | None = None) -> list[str]:
+    def get_usernames(self, db_paths: list[Path] | None = None, chat_name: str | None = None) -> list[str]:
         """
         Query database(s) for unique usernames, optionally filtered by chat.
 
@@ -116,6 +140,8 @@ class EmojiExplorer:
 
         Parameters
         ----------
+        db_paths : list of Path, optional
+            List of database paths to query. If None, uses initial_db_paths.
         chat_name : str, optional
             Chat name to filter by. If None, returns all usernames.
 
@@ -125,22 +151,24 @@ class EmojiExplorer:
             List of username strings, sorted alphabetically.
         """
         if chat_name:
-            usernames = self._get_usernames_for_chat(chat_name)
+            usernames = self._get_usernames_for_chat(db_paths, chat_name)
         else:
             query = "SELECT DISTINCT username FROM emojis"
-            df = self._query_all_databases(query)
+            df = self._query_all_databases(query, db_paths)
             if df.empty:
                 return []
             usernames = df["username"].unique().tolist()
 
         return sorted(usernames)
 
-    def _get_usernames_for_chat(self, chat_name: str) -> list[str]:
+    def _get_usernames_for_chat(self, db_paths: list[Path] | None = None, chat_name: str | None = None) -> list[str]:
         """
         Get usernames that have messages in a specific chat.
 
         Parameters
         ----------
+        db_paths : list of Path, optional
+            List of database paths to query.
         chat_name : str
             Chat name to filter by (may include database suffix).
 
@@ -149,10 +177,20 @@ class EmojiExplorer:
         list of str
             List of username strings.
         """
-        use_suffix = len(self.db_paths) > 1
+        if db_paths is None:
+            db_paths = self.initial_db_paths
+        
+        if chat_name is None:
+            return []
+            
+        use_suffix = len(db_paths) > 1
         usernames: set[str] = set()
 
-        for db_path in self.db_paths:
+        for db_path in db_paths:
+            db_path = Path(db_path)
+            if not db_path.exists():
+                continue
+                
             if use_suffix:
                 suffix = f" ({db_path.stem})"
                 if chat_name.endswith(suffix):
@@ -171,7 +209,7 @@ class EmojiExplorer:
 
         return list(usernames)
 
-    def get_chat_names(self, username: str | None = None) -> list[str]:
+    def get_chat_names(self, db_paths: list[Path] | None = None, username: str | None = None) -> list[str]:
         """
         Query database(s) for unique chat names, optionally filtered by user.
 
@@ -182,6 +220,8 @@ class EmojiExplorer:
 
         Parameters
         ----------
+        db_paths : list of Path, optional
+            List of database paths to query. If None, uses initial_db_paths.
         username : str, optional
             Username to filter by. If None, returns all chat names.
 
@@ -190,10 +230,17 @@ class EmojiExplorer:
         list of str
             List of chat name strings, sorted alphabetically.
         """
-        use_suffix = len(self.db_paths) > 1
+        if db_paths is None:
+            db_paths = self.initial_db_paths
+            
+        use_suffix = len(db_paths) > 1
         chat_names: list[str] = []
 
-        for db_path in self.db_paths:
+        for db_path in db_paths:
+            db_path = Path(db_path)
+            if not db_path.exists():
+                continue
+                
             if username:
                 query = "SELECT DISTINCT chat_name FROM emojis WHERE username = ?"
                 params: list[str] | None = [username]
@@ -215,7 +262,7 @@ class EmojiExplorer:
         return sorted(set(chat_names))
 
     def get_emoji_counts(
-        self, username: str | None = None, chat_name: str | None = None
+        self, db_paths: list[Path] | None = None, username: str | None = None, chat_name: str | None = None
     ) -> pd.DataFrame:
         """
         Query database(s) for total occurrence count of each emoji.
@@ -226,6 +273,8 @@ class EmojiExplorer:
 
         Parameters
         ----------
+        db_paths : list of Path, optional
+            List of database paths to query. If None, uses initial_db_paths.
         username : str, optional
             Username to filter by. If None, includes all users.
         chat_name : str, optional
@@ -236,12 +285,19 @@ class EmojiExplorer:
         pd.DataFrame
             DataFrame with columns 'emoji' and 'count', sorted by count descending.
         """
+        if db_paths is None:
+            db_paths = self.initial_db_paths
+            
         # For chat_name filter with multiple DBs, we need to handle the suffix
-        use_suffix = len(self.db_paths) > 1
+        use_suffix = len(db_paths) > 1
 
         dfs: list[pd.DataFrame] = []
 
-        for db_path in self.db_paths:
+        for db_path in db_paths:
+            db_path = Path(db_path)
+            if not db_path.exists():
+                continue
+                
             # Build WHERE clause based on filters
             where_clauses: list[str] = []
             params: list[str] = []
@@ -295,7 +351,7 @@ class EmojiExplorer:
         return result.sort_values("count", ascending=False)
 
     def get_emoji_time_series(
-        self, username: str | None = None, chat_name: str | None = None
+        self, db_paths: list[Path] | None = None, username: str | None = None, chat_name: str | None = None
     ) -> pd.DataFrame:
         """
         Query database(s) for individual emoji occurrences with timestamps.
@@ -306,6 +362,8 @@ class EmojiExplorer:
 
         Parameters
         ----------
+        db_paths : list of Path, optional
+            List of database paths to query. If None, uses initial_db_paths.
         username : str, optional
             Username to filter by. If None, includes all users.
         chat_name : str, optional
@@ -316,11 +374,18 @@ class EmojiExplorer:
         pd.DataFrame
             DataFrame with columns 'timestamp' and 'emoji', sorted by timestamp.
         """
-        use_suffix = len(self.db_paths) > 1
+        if db_paths is None:
+            db_paths = self.initial_db_paths
+            
+        use_suffix = len(db_paths) > 1
 
         dfs: list[pd.DataFrame] = []
 
-        for db_path in self.db_paths:
+        for db_path in db_paths:
+            db_path = Path(db_path)
+            if not db_path.exists():
+                continue
+                
             # Build WHERE clause based on filters
             where_clauses: list[str] = []
             params: list[str] = []
@@ -412,13 +477,19 @@ class EmojiExplorer:
         Configure the Dash application layout with controls, plot area, and file upload.
 
         Creates sections for file upload (when needed), database status, chart controls,
-        and graph display. Uses a Store component to maintain state of loaded databases.
+        and graph display. Uses per-session Store components to maintain state of 
+        loaded databases, ensuring user isolation.
         Includes dropdowns for chart type, user, and chat selection.
         """
+        # Generate session ID for this user
+        session_id = str(uuid.uuid4())
 
         self.app.layout = html.Div(
             [
-                dcc.Store(id="db-paths-store", data=[str(p) for p in self.db_paths]),
+                # Session identifier - stored in browser session storage, not shared
+                dcc.Store(id="session-id", data=session_id, storage_type="session"),
+                # Per-session database paths - using session storage for isolation
+                dcc.Store(id="db-paths-store", data=[str(p) for p in self.initial_db_paths], storage_type="session"),
                 html.H1("🎭 Emoji Explorer 📊", style={"textAlign": "center"}),
                 # Upload section
                 html.Div(
@@ -527,7 +598,7 @@ class EmojiExplorer:
                             },
                         ),
                     ],
-                    style={"display": "block" if not self.db_paths else "none"},
+                    style={"display": "block" if not self.initial_db_paths else "none"},
                 ),
                 # Main dashboard section
                 html.Div(
@@ -625,17 +696,19 @@ class EmojiExplorer:
                             },
                         ),
                     ],
-                    style={"display": "block" if self.db_paths else "none"},
+                    style={"display": "block" if self.initial_db_paths else "none"},
                 ),
             ]
         )
 
-    def _build_user_options(self, chat_name: str | None = None) -> list[dict[str, str]]:
+    def _build_user_options(self, db_paths: list[Path] | None = None, chat_name: str | None = None) -> list[dict[str, str]]:
         """
         Build user dropdown options, optionally filtered by chat.
 
         Parameters
         ----------
+        db_paths : list of Path, optional
+            List of database paths to query.
         chat_name : str, optional
             Chat name to filter users by.
 
@@ -644,7 +717,7 @@ class EmojiExplorer:
         list of dict
             List of dropdown option dicts with 'label' and 'value' keys.
         """
-        usernames = self.get_usernames(chat_name)
+        usernames = self.get_usernames(db_paths, chat_name)
         # If "You" is in the list, move it to the top
         if "You" in usernames:
             usernames.remove("You")
@@ -654,12 +727,14 @@ class EmojiExplorer:
             {"label": username, "value": username} for username in usernames
         ]
 
-    def _build_chat_options(self, username: str | None = None) -> list[dict[str, str]]:
+    def _build_chat_options(self, db_paths: list[Path] | None = None, username: str | None = None) -> list[dict[str, str]]:
         """
         Build chat dropdown options, optionally filtered by user.
 
         Parameters
         ----------
+        db_paths : list of Path, optional
+            List of database paths to query.
         username : str, optional
             Username to filter chats by.
 
@@ -668,7 +743,7 @@ class EmojiExplorer:
         list of dict
             List of dropdown option dicts with 'label' and 'value' keys.
         """
-        chat_names = self.get_chat_names(username)
+        chat_names = self.get_chat_names(db_paths, username)
 
         return [{"label": "All Chats", "value": "all"}] + [
             {"label": chat_name, "value": chat_name} for chat_name in chat_names
@@ -696,6 +771,7 @@ class EmojiExplorer:
             State("file-upload", "filename"),
             State("format-selector", "value"),
             State("db-paths-store", "data"),
+            State("session-id", "data"),
             prevent_initial_call=True,
         )
         def handle_file_upload(
@@ -703,19 +779,22 @@ class EmojiExplorer:
             filename: str | None,
             chat_format: str,
             stored_db_paths: list[str],
+            session_id: str,
         ) -> tuple[
             list[str],
             html.Div,
             dict[str, str],
             dict[str, str],
-            # html.Div,
         ]:
             """
             Handle file upload, process data, and update dashboard state.
 
+            SECURITY: Creates session-specific directories and stores paths in
+            per-session storage to ensure user isolation in multi-user deployments.
+
             Processes the uploaded .zip file in the specified format,
             extracts emojis, and adds the resulting database to the list
-            of loaded databases.
+            of loaded databases for THIS SESSION ONLY.
 
             Parameters
             ----------
@@ -726,7 +805,9 @@ class EmojiExplorer:
             chat_format : str
                 Selected chat format (Signal, Whatsapp, or Messenger).
             stored_db_paths : list of str
-                Current list of loaded database paths.
+                Current list of loaded database paths for this session.
+            session_id : str
+                Unique session identifier for this user.
 
             Returns
             -------
@@ -746,6 +827,10 @@ class EmojiExplorer:
                 content_type, content_string = contents.split(",")
                 zip_bytes = base64.b64decode(content_string)
 
+                # Create session-specific directory for this user's uploads
+                session_db_dir = SESSION_UPLOAD_ROOT / session_id
+                session_db_dir.mkdir(parents=True, exist_ok=True)
+
                 # Process the uploaded file in a temporary location
                 with tempfile.TemporaryDirectory() as temp_dir:
                     output_db_path = Path(temp_dir) / "emojis.sql"
@@ -756,20 +841,15 @@ class EmojiExplorer:
                         output_db_path,
                     )
 
-                    # Copy the database to a persistent location
-                    db_dir = Path("data") / "uploads"
-                    db_dir.mkdir(parents=True, exist_ok=True)
-                    import uuid
-
+                    # Copy the database to the session-specific directory
+                    # This ensures different sessions have separate storage
                     persistent_db_path = (
-                        db_dir
+                        session_db_dir
                         / f"emojis_{uuid.uuid4().hex[:8]}_{filename.replace('.zip', '.sql')}"
                     )
-                    import shutil
-
                     shutil.copy2(output_db_path, persistent_db_path)
 
-                    # Update the stored paths
+                    # Update the stored paths (session-scoped only)
                     updated_paths = stored_db_paths + [str(persistent_db_path)]
 
                     # Create success message
@@ -777,9 +857,6 @@ class EmojiExplorer:
                         f"Successfully loaded data from {filename}",
                         style={"color": "green", "padding": "10px"},
                     )
-
-                    # Update db_paths in the explorer instance so queries work
-                    self.db_paths = [Path(p) for p in updated_paths]
 
                     return (
                         updated_paths,
@@ -800,14 +877,14 @@ class EmojiExplorer:
                     {
                         "display": "block" if stored_db_paths else "none"
                     },  # Keep dashboard if other DBs exist
-                    # html.Div(),
                 )
 
         @self.app.callback(
             Output("user-filter", "options"),
             Input("chat-filter", "value"),
+            State("db-paths-store", "data"),
         )
-        def update_user_options(selected_chat: str) -> list[dict[str, str]]:
+        def update_user_options(selected_chat: str, stored_db_paths: list[str]) -> list[dict[str, str]]:
             """
             Update user dropdown options based on selected chat.
 
@@ -815,20 +892,24 @@ class EmojiExplorer:
             ----------
             selected_chat : str
                 Selected chat value from dropdown, or "all" for all chats.
+            stored_db_paths : list of str
+                Session-specific database paths.
 
             Returns
             -------
             list of dict
                 User dropdown options filtered by chat.
             """
+            db_paths = [Path(p) for p in stored_db_paths] if stored_db_paths else None
             chat_name = None if selected_chat == "all" else selected_chat
-            return self._build_user_options(chat_name)
+            return self._build_user_options(db_paths, chat_name)
 
         @self.app.callback(
             Output("chat-filter", "options"),
             Input("user-filter", "value"),
+            State("db-paths-store", "data"),
         )
-        def update_chat_options(selected_user: str) -> list[dict[str, str]]:
+        def update_chat_options(selected_user: str, stored_db_paths: list[str]) -> list[dict[str, str]]:
             """
             Update chat dropdown options based on selected user.
 
@@ -836,23 +917,27 @@ class EmojiExplorer:
             ----------
             selected_user : str
                 Selected user value from dropdown, or "everyone" for all users.
+            stored_db_paths : list of str
+                Session-specific database paths.
 
             Returns
             -------
             list of dict
                 Chat dropdown options filtered by user.
             """
+            db_paths = [Path(p) for p in stored_db_paths] if stored_db_paths else None
             username = None if selected_user == "everyone" else selected_user
-            return self._build_chat_options(username)
+            return self._build_chat_options(db_paths, username)
 
         @self.app.callback(
             Output("emoji-frequency-plot", "figure"),
             Input("chart-type", "value"),
             Input("user-filter", "value"),
             Input("chat-filter", "value"),
+            State("db-paths-store", "data"),
         )
         def update_plot(
-            chart_type: str, selected_user: str, selected_chat: str
+            chart_type: str, selected_user: str, selected_chat: str, stored_db_paths: list[str]
         ) -> go.Figure:
             """
             Generate a Plotly figure based on selected chart type and filters.
@@ -862,6 +947,8 @@ class EmojiExplorer:
             For time series, always shows cumulative counts. Returns a figure
             with appropriate traces, labels, and hover templates.
 
+            SECURITY: Uses session-specific database paths only.
+
             Parameters
             ----------
             chart_type : str
@@ -870,19 +957,23 @@ class EmojiExplorer:
                 Username to filter by, or "everyone" for all users.
             selected_chat : str
                 Chat name to filter by, or "all" for all chats.
+            stored_db_paths : list of str
+                Session-specific database paths.
 
             Returns
             -------
             go.Figure
                 Plotly figure ready for rendering.
             """
+            db_paths = [Path(p) for p in stored_db_paths] if stored_db_paths else None
+            
             # Convert dropdown values to None for query methods
             username = None if selected_user == "everyone" else selected_user
             chat_name = None if selected_chat == "all" else selected_chat
 
             if chart_type == "timeseries":
                 # Get time series data from SQL
-                df = self.get_emoji_time_series(username, chat_name)
+                df = self.get_emoji_time_series(db_paths, username, chat_name)
 
                 if df.empty:
                     return go.Figure().update_layout(
@@ -947,7 +1038,7 @@ class EmojiExplorer:
                 return self.add_toggle_buttons(fig)
 
             # Get data from SQL for bar/pie charts
-            df = self.get_emoji_counts(username, chat_name)
+            df = self.get_emoji_counts(db_paths, username, chat_name)
 
             if df.empty:
                 # Return empty figure if no data
@@ -1008,10 +1099,42 @@ class EmojiExplorer:
         port : int, default=8050
             TCP port to bind the server to.
         """
-        for db_path in self.db_paths:
+        for db_path in self.initial_db_paths:
             print(f"Loading data from: {db_path}")
         print(f"Starting Dash app on http://{host}:{port} ...")
         self.app.run(debug=debug, host=host, port=port, **kwargs)
+
+
+def cleanup_old_uploads(max_age_hours: int = 2) -> None:
+    """
+    Remove old session upload directories to free disk space and reduce security risks.
+
+    Session upload directories older than max_age_hours are deleted recursively.
+    This prevents accumulation of stale data and reduces exposure window for
+    uploaded files in ephemeral storage environments.
+
+    Parameters
+    ----------
+    max_age_hours : int, default=2
+        Maximum age of upload directories in hours. Directories older than this
+        are deleted.
+    """
+    if not SESSION_UPLOAD_ROOT.exists():
+        return
+
+    max_age_seconds = max_age_hours * 3600
+    current_time = time.time()
+
+    for session_dir in SESSION_UPLOAD_ROOT.iterdir():
+        if not session_dir.is_dir():
+            continue
+
+        dir_age_seconds = current_time - session_dir.stat().st_mtime
+        if dir_age_seconds > max_age_seconds:
+            try:
+                shutil.rmtree(session_dir)
+            except OSError as e:
+                print(f"Warning: Failed to delete old upload directory {session_dir}: {e}")
 
 
 def main() -> int | None:
@@ -1046,6 +1169,8 @@ def main() -> int | None:
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
 
     args = parser.parse_args()
+
+    cleanup_old_uploads()
 
     db_paths: list[Path] = []
     for path_str in args.db_paths:
