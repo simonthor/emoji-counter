@@ -21,6 +21,7 @@ from dash.dependencies import Input, Output, State
 
 from emoji_counter.upload_processor import process_uploaded_file
 
+
 class EmojiExplorer:
     """
     Interactive Dash dashboard for exploring emoji usage data from SQLite.
@@ -991,7 +992,9 @@ class EmojiExplorer:
 
             return self.add_toggle_buttons(fig)
 
-    def run(self, debug: bool = True, port: int = 8050) -> None:
+    def run(
+        self, debug: bool = False, host: str = "127.0.0.1", port: int = 8050, **kwargs
+    ) -> None:
         """
         Start the Dash web server and block until interrupted.
 
@@ -1007,8 +1010,8 @@ class EmojiExplorer:
         """
         for db_path in self.db_paths:
             print(f"Loading data from: {db_path}")
-        print(f"Starting Dash app on http://127.0.0.1:{port}")
-        self.app.run(debug=debug, port=port)
+        print(f"Starting Dash app on http://{host}:{port} ...")
+        self.app.run(debug=debug, host=host, port=port, **kwargs)
 
 
 def main() -> int | None:
