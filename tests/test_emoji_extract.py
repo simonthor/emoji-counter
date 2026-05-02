@@ -86,6 +86,51 @@ class TestParseMessageFile:
         emojis = [r[0] for r in result]
         assert emojis == ["😄", "😂", "🤔"]
 
+    def test_parse_repairs_mojibake_chat_name(self, tmp_path: Path):
+        """Repair mojibake filenames so chat_name is stored as proper Unicode."""
+        jp_name = "日本で会いましょう"
+        mojibake_name = jp_name.encode("utf-8").decode("latin-1")
+        file_path = tmp_path / f"{mojibake_name} (9632772583463997).txt"
+        file_path.write_text(
+            (
+                "Conversation: Test Chat\n\n"
+                "From: You\n"
+                "Type: outgoing\n"
+                "Sent: Sat, 01 Jul 2023 14:29:25 +0200\n\n"
+                "こんにちは 😊\n"
+            ),
+            encoding="utf-8",
+        )
+
+        result = parse_message_file(file_path)
+
+        assert len(result) == 1
+        assert result[0][3] == jp_name
+
+    def test_parse_repairs_mojibake_content_for_emoji_extraction(
+        self, tmp_path: Path
+    ):
+        """Extract emoji from mojibake message content."""
+        file_path = tmp_path / "chat (1).txt"
+        file_path.write_text(
+            (
+                "Conversation: Test Chat\n\n"
+                "From: Alice\n"
+                "Type: incoming\n"
+                "Sent: Tue, 13 Aug 2024 09:30:41 +0200\n"
+                "Received: Tue, 13 Aug 2024 09:30:41 +0200\n\n"
+                "Hej ð\n"
+            ),
+            encoding="utf-8",
+        )
+
+        result = parse_message_file(file_path)
+
+        assert len(result) == 1
+        emoji, _, username, _ = result[0]
+        assert emoji == "😊"
+        assert username == "Alice"
+
 
 class TestProcessInput:
     """Tests for the process_input function."""

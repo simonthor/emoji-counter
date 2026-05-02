@@ -347,6 +347,7 @@ class TestMessengerConversion:
 
     def test_parse_messenger_file_repairs_mojibake(self, tmp_path: Path) -> None:
         """Repair mojibake text from Messenger JSON content and title."""
+        jp_mojibake = "こんにちは".encode("utf-8").decode("latin-1")
         thread_dir = tmp_path / "alice_12345"
         thread_dir.mkdir()
         message_file = thread_dir / "message_1.json"
@@ -358,7 +359,7 @@ class TestMessengerConversion:
                         {
                             "sender_name": "BjÃ¶rn",
                             "timestamp_ms": 1717616400000,
-                            "content": "Hej ð",
+                            "content": f"Hej ð {jp_mojibake}",
                         }
                     ],
                 }
@@ -370,7 +371,7 @@ class TestMessengerConversion:
 
         assert chat_name == "För chatten"
         assert messages[0].sender == "Björn"
-        assert messages[0].content == "Hej 😊"
+        assert messages[0].content == "Hej 😊 こんにちは"
 
     def test_parse_messenger_file_without_underscore_uses_full_name(
         self, tmp_path: Path
