@@ -760,7 +760,7 @@ def main() -> int | None:
         default=8050,
         help="Port to run the Dash app on (default: 8050)",
     )
-    parser.add_argument("--no-debug", action="store_true", help="Disable debug mode")
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode")
 
     args = parser.parse_args()
 
@@ -773,7 +773,7 @@ def main() -> int | None:
         db_paths.append(db_path)
 
     explorer = EmojiExplorer(db_paths)
-    explorer.run(debug=not args.no_debug, port=args.port)
+    explorer.run(debug=args.debug, port=args.port)
     return None
 
 

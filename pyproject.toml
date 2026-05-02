@@ -10,6 +10,7 @@ dependencies = [
     "plotly>=6.6.0",
     "emoji>=2.15.0",
     "dash>=4.1.0",
+    "tqdm>=4.67.3",
 ]
 
 [dependency-groups]

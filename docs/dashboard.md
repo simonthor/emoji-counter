@@ -31,7 +31,7 @@ When multiple databases are provided, chat names are automatically suffixed with
 |--------|---------|-------------|
 | `db_paths` | (required) | One or more paths to SQLite databases |
 | `--port` | `8050` | Port to run the server on |
-| `--no-debug` | (disabled) | Disable debug mode and auto-reload |
+| `--debug` | (disabled) | Enable debug mode and auto-reload |
 
 ### Accessing the Dashboard
 

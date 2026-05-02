@@ -99,6 +99,7 @@ When converting a directory, output files are renamed to `{chat_name} (Whatsapp)
 | `-o, --output` | Yes | Output file or directory for converted files |
 | `--your-name` | No | Your display name in WhatsApp (messages from you become "You") |
 | `--name-pattern` | No | Pattern to extract chat name from filename |
+| `--format` | No | Input format: `Whatsapp` (default) or `Messenger` |
 
 ### Name Patterns
 
@@ -122,6 +123,58 @@ Error: Filename 'chat.txt' does not match pattern 'WhatsApp-chatt med %s'
 Either:
 1. Update the pattern to match your filename format
 2. Omit `--name-pattern` to use the full filename stem as the chat name
+
+## Messenger Messages
+
+Messenger exports can be converted directly from JSON to sigtop format.
+
+### TODO: Add download instructions
+
+> **TODO:** Add step-by-step instructions for downloading Messenger data export.
+
+### Required Input Structure
+
+Point `--input` to the Messenger export root directory that contains:
+
+```
+<input>/
+└── your_facebook_activity/
+    └── messages/
+        ├── e2ee_cutover/
+        │   └── <thread_name>/message_1.json
+        └── inbox/
+            └── <thread_name>/message_1.json
+```
+
+### Converting Messenger Exports
+
+```bash
+message-convert \
+  --format Messenger \
+  -i messenger_export/ \
+  -o converted/ \
+  --your-name "Your Name"
+```
+
+### How Messenger Metadata Is Mapped
+
+- Chat name: `title` field in each JSON file
+- Chat ID:
+  - If thread folder name is `<name>_<numbers>`, use the part after the last `_`
+  - If there is no `_`, use the full thread folder name
+- Message sender: `sender_name`
+- Message timestamp: `timestamp_ms` (Unix milliseconds)
+- Message text: `content`
+
+If the same thread exists in both `e2ee_cutover` and `inbox`, messages are merged and duplicates are removed.
+
+Output files are written as:
+
+```
+<chat title> (<chat id>).txt
+```
+
+in the output directory.
 
 ## Other Formats
 

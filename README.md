@@ -148,7 +148,7 @@ When multiple databases are provided, chat names are automatically suffixed with
 **Options:**
 - `db_paths` (required): One or more paths to SQLite databases created by the extractor
 - `--port` (default: 8050): Port to run the Dash app on
-- `--no-debug`: Disable debug mode
+- `--debug`: Enable debug mode
 
 Then open your browser to http://127.0.0.1:8050
 
