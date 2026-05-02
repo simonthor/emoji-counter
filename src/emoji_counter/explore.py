@@ -21,6 +21,9 @@ from dash.dependencies import Input, Output, State
 
 from emoji_counter.upload_processor import process_uploaded_file
 
+APP = dash.Dash(__name__)
+server = APP.server
+
 
 class EmojiExplorer:
     """
@@ -62,7 +65,7 @@ class EmojiExplorer:
             If None, users can upload files via the web interface.
         """
         self.db_paths = db_paths if db_paths else []
-        self.app = dash.Dash(__name__)
+        self.app = APP
         self.setup_layout()
         self.setup_callbacks()
 
@@ -415,7 +418,7 @@ class EmojiExplorer:
         and graph display. Uses a Store component to maintain state of loaded databases.
         Includes dropdowns for chart type, user, and chat selection.
         """
-        
+
         self.app.layout = html.Div(
             [
                 dcc.Store(id="db-paths-store", data=[str(p) for p in self.db_paths]),
@@ -493,6 +496,28 @@ class EmojiExplorer:
                                         ),
                                     ],
                                     style={"textAlign": "center", "padding": "20px"},
+                                ),
+                                html.Div(
+                                    [
+                                        "Not working? Check the ",
+                                        html.A(
+                                            "documentation",
+                                            href="https://simonthor.github.io/emoji-counter/dashboard/",
+                                            target="_blank",
+                                        ),
+                                        ". Found a bug? ",
+                                        html.A(
+                                            "Report it on Github.",
+                                            href="https://github.com/simonthor/emoji-counter/issues",
+                                            target="_blank",
+                                        ),
+                                    ],
+                                    style={
+                                        "textAlign": "center",
+                                        "color": "#666",
+                                        "fontSize": "0.9rem",
+                                        "paddingBottom": "20px",
+                                    },
                                 ),
                                 html.Div(id="upload-status", style={"padding": "10px"}),
                             ],
@@ -573,6 +598,28 @@ class EmojiExplorer:
                         ),
                         html.Div(
                             "Shortcut: Press Alt+S to save the current chart view.",
+                            style={
+                                "textAlign": "center",
+                                "color": "#666",
+                                "fontSize": "0.9rem",
+                                "paddingBottom": "20px",
+                            },
+                        ),
+                        html.Div(
+                            [
+                                "Not working? Check the ",
+                                html.A(
+                                    "documentation",
+                                    href="https://simonthor.github.io/emoji-counter/dashboard/",
+                                    target="_blank",
+                                ),
+                                ". Found a bug? ",
+                                html.A(
+                                    "Report it on Github.",
+                                    href="https://github.com/simonthor/emoji-counter/issues",
+                                    target="_blank",
+                                ),
+                            ],
                             style={
                                 "textAlign": "center",
                                 "color": "#666",
@@ -695,7 +742,6 @@ class EmojiExplorer:
                     html.Div("No file selected", style={"color": "red"}),
                     {"display": "block"},
                     {"display": "none" if not stored_db_paths else "block"},
-                    # html.Div(),
                 )
 
             try:
