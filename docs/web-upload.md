@@ -13,6 +13,7 @@ emoji-explore
 ```
 
 Then open [http://127.0.0.1:8050](http://127.0.0.1:8050) in your browser.
+This is the same interface as the one you would see on [the website](https://emoji-counter.onrender.com), but running locally on your machine.
 
 You'll see an "Upload Chat Data" section at the top of the page.
 

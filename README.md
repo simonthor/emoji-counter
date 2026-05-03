@@ -18,6 +18,8 @@ Extract and visualize emoji usage from chat messages.
 - **Cumulative time series** showing emoji usage growth over time
 
 ## Installation
+There are two ways of using the program: either by installing it locally and running the commands from the terminal, or by [using the website](https://emoji-counter.onrender.com) and uploading the chat data directly through the dashboard. The web-based upload is the easiest way to get started, but if you want more control over the process, you can install it locally.
+
 Clone the repository and navigate to the project directory:
 
 ```bash
