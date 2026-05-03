@@ -3,6 +3,8 @@
 Extract and visualize emoji usage from chat messages.
 ![Dashboard Screenshot](./banner.png)
 
+## Try it out online: https://emoji-counter.onrender.com
+
 ## Features
 
 - **Web-based file upload** to process chat exports directly in the dashboard
